@@ -113,7 +113,7 @@
     }
     .task-item {
       display: grid;
-      grid-template-columns: auto 80px 100px;
+      grid-template-columns: auto 110px;
       gap: 8px;
       align-items: flex-start;
       padding: 6px 4px;
@@ -257,6 +257,12 @@
       flex-wrap: wrap;
       font-size: 13px;
     }
+    .section-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -271,11 +277,10 @@
     <span>Режим работы:</span>
     <select id="roleSelect" class="role-select">
       <option value="viewer">Просмотр</option>
-      <option value="foreman">Производитель работ</option>
       <option value="otk">ОТК</option>
     </select>
     <span id="roleBadge" class="role-badge">Только просмотр</span>
-    <span class="small">Для изменения галочек требуется пароль роли.</span>
+    <span class="small">Отмечать галочки может только ОТК по паролю.</span>
   </div>
 </header>
 
@@ -293,15 +298,13 @@
       </div>
     </div>
 
-    <div class="small" id="moduleTypeHint">
-      Левые галочки — факт выполнения (производитель работ), правые — приёмка ОТК.
-    </div>
+    <div class="small" id="moduleTypeHint"></div>
+    <div class="small" id="moduleFloorInfo"></div>
 
     <div id="tasksContainer" class="tasks"></div>
 
     <div class="footer-status">
       <div class="percent-block">
-        <div id="percentDone" class="percent-line">Выполнение: 0%</div>
         <div id="percentQA" class="percent-line">Принято ОТК: 0%</div>
       </div>
       <div id="statusBadge" class="badge badge-not-ready">
@@ -319,12 +322,14 @@
       </div>
       <div class="section-summary-body">
         <div class="percent-block">
-          <div id="sectionPercentDone" class="percent-line">Выполнение секции: 0%</div>
           <div id="sectionPercentQA" class="percent-line">Принято ОТК по секции: 0%</div>
         </div>
         <div id="sectionStatusBadge" class="badge badge-not-ready">
           Секция не готова
         </div>
+      </div>
+      <div class="section-actions">
+        <button id="exportCsv">Выгрузить сводку в Excel (CSV)</button>
       </div>
     </div>
 
@@ -333,7 +338,7 @@
       <span class="tag" id="summaryReadyCount">Готово: 0 модулей</span>
     </div>
     <div class="small">
-      В таблице отображаются % выполнения и % приёмки ОТК.  
+      В таблице отображаются этаж, % приёмки ОТК и статус модуля.  
       Секция считается готовой, если средний % ОТК = 100%.
     </div>
     <div class="summary-body">
@@ -341,7 +346,7 @@
         <thead>
         <tr>
           <th>Модуль</th>
-          <th>% выполнения</th>
+          <th>Этаж</th>
           <th>% ОТК</th>
           <th>Статус</th>
         </tr>
@@ -354,17 +359,15 @@
 
 <script>
   const TOTAL_MODULES = 176;
-  const STORAGE_KEY = 'qa_modules_data_v3';
+  const STORAGE_KEY = 'qa_modules_data_v4'; // новая версия, только ОТК
 
   const ROLE_PASSWORDS = {
-    foreman: 'prod123',
     otk: 'otk123'
   };
 
   const ROLE_LABELS = {
     viewer: 'Только просмотр',
-    foreman: 'Режим производителя работ',
-    otk: 'Режим ОТК'
+    otk: 'Режим ОТК (можно проставлять галочки)'
   };
 
   // Обычные модули: 24 задачи
@@ -405,7 +408,7 @@
     "Монтаж лифтового оборудования ЛЛУ."
   ];
 
-  // Группы работ для стандартных модулей (номера – это исходные номера задач 1..24)
+  // Группы работ для стандартных модулей (номера – исходные номера задач 1..24)
   const GROUP_NAMES = ["Все работы", "СТК", "ВИС", "ЭОМ", "Потолки", "Фасад", "Отделка"];
   const GROUP_INDICES = {
     "СТК":      [2, 3],
@@ -449,11 +452,20 @@
       .filter(i => i >= 0 && i < TASKS_STANDARD.length);
   }
 
-  let modulesData = {}; // { M1: { doneTasks:[], qaTasks:[] }, ... }
+  function getModuleNumber(moduleId) {
+    return parseInt(moduleId.replace('M', ''), 10) || 1;
+  }
+
+  function getFloor(moduleId) {
+    const num = getModuleNumber(moduleId);
+    return 1 + Math.ceil(num / 8); // 1-8 -> 2 этаж; 9-16 -> 3 этаж и т.д.
+  }
+
+  let modulesData = {}; // { M1: { qaTasks:[] }, ... }
   let currentModuleId = 'M1';
   let currentRole = 'viewer';
   let currentGroup = 'Все работы';
-  const authenticatedRoles = { foreman: false, otk: false };
+  const authenticatedRoles = { otk: false };
 
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
@@ -461,27 +473,18 @@
 
     if (!modulesData[moduleId]) {
       modulesData[moduleId] = {
-        doneTasks: Array(len).fill(false),
         qaTasks: Array(len).fill(false)
       };
       return;
     }
 
     const m = modulesData[moduleId];
-    if (!Array.isArray(m.doneTasks)) m.doneTasks = [];
     if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
 
-    const newDone = Array(len).fill(false);
     const newQA = Array(len).fill(false);
-
-    for (let i = 0; i < Math.min(len, m.doneTasks.length); i++) {
-      newDone[i] = !!m.doneTasks[i];
-    }
     for (let i = 0; i < Math.min(len, m.qaTasks.length); i++) {
       newQA[i] = !!m.qaTasks[i];
     }
-
-    m.doneTasks = newDone;
     m.qaTasks = newQA;
   }
 
@@ -546,8 +549,7 @@
       return;
     }
 
-    const label = newRole === 'foreman' ? 'Производитель работ' : 'ОТК';
-    const pwd = prompt(`Введите пароль для роли "${label}":`);
+    const pwd = prompt('Введите пароль для ОТК:');
     if (pwd === ROLE_PASSWORDS[newRole]) {
       authenticatedRoles[newRole] = true;
       setRole(newRole);
@@ -586,11 +588,17 @@
     const hint = document.getElementById('moduleTypeHint');
     if (isLluModule(currentModuleId)) {
       hint.textContent =
-        'Модуль ЛЛУ. Группы работ не применяются, отображаются все виды работ ЛЛУ. Левые галочки — выполнение, правые — приёмка ОТК.';
+        'Модуль ЛЛУ. Группы не применяются, отображаются все виды работ ЛЛУ. Галочки ставит только ОТК.';
     } else {
       hint.textContent =
-        'Обычный модуль. Можно отфильтровать работы по группе (СТК, ВИС, ЭОМ, Потолки, Фасад, Отделка). Левые галочки — выполнение, правые — приёмка ОТК.';
+        'Обычный модуль. Можно отфильтровать работы по группе (СТК, ВИС, ЭОМ, Потолки, Фасад, Отделка). Галочки ставит только ОТК.';
     }
+  }
+
+  function updateModuleFloorInfo() {
+    const el = document.getElementById('moduleFloorInfo');
+    const floor = getFloor(currentModuleId);
+    el.textContent = 'Этаж: ' + floor;
   }
 
   function updateGroupUIForModule() {
@@ -610,6 +618,7 @@
     container.innerHTML = '';
 
     updateModuleTypeHint();
+    updateModuleFloorInfo();
     updateGroupUIForModule();
 
     const moduleData = modulesData[currentModuleId];
@@ -624,22 +633,6 @@
       const labelDiv = document.createElement('div');
       labelDiv.className = 'task-text';
       labelDiv.textContent = (taskIndex + 1) + '. ' + baseTasks[taskIndex];
-
-      const doneWrapper = document.createElement('label');
-      doneWrapper.className = 'task-checkbox';
-      const doneCheckbox = document.createElement('input');
-      doneCheckbox.type = 'checkbox';
-      doneCheckbox.checked = moduleData.doneTasks[taskIndex];
-      doneCheckbox.disabled = currentRole !== 'foreman';
-      doneCheckbox.addEventListener('change', () => {
-        if (currentRole !== 'foreman') return;
-        moduleData.doneTasks[taskIndex] = doneCheckbox.checked;
-        updateModuleStats();
-        updateSummaryTable();
-        saveToStorage();
-      });
-      doneWrapper.appendChild(doneCheckbox);
-      doneWrapper.appendChild(document.createTextNode('Выполнено'));
 
       const qaWrapper = document.createElement('label');
       qaWrapper.className = 'task-checkbox';
@@ -658,7 +651,6 @@
       qaWrapper.appendChild(document.createTextNode('Принято ОТК'));
 
       item.appendChild(labelDiv);
-      item.appendChild(doneWrapper);
       item.appendChild(qaWrapper);
       container.appendChild(item);
     });
@@ -669,10 +661,8 @@
   function updateModuleStats() {
     ensureModuleArraysSize(currentModuleId);
     const moduleData = modulesData[currentModuleId];
-    const donePercent = calculatePercent(moduleData.doneTasks);
     const qaPercent = calculatePercent(moduleData.qaTasks);
 
-    document.getElementById('percentDone').textContent = 'Выполнение: ' + donePercent + '%';
     document.getElementById('percentQA').textContent = 'Принято ОТК: ' + qaPercent + '%';
 
     const badgeEl = document.getElementById('statusBadge');
@@ -688,18 +678,15 @@
     tbody.innerHTML = '';
 
     let readyCount = 0;
-    let sumDone = 0;
     let sumQA = 0;
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = 'M' + i;
       ensureModuleArraysSize(id);
       const data = modulesData[id];
-      const donePercent = calculatePercent(data.doneTasks);
       const qaPercent = calculatePercent(data.qaTasks);
       const ready = qaPercent === 100;
 
-      sumDone += donePercent;
       sumQA += qaPercent;
       if (ready) readyCount++;
 
@@ -708,9 +695,8 @@
 
       const tdModule = document.createElement('td');
       tdModule.textContent = id + (isLluModule(id) ? ' (ЛЛУ)' : '');
-      const tdDone = document.createElement('td');
-      tdDone.className = 'percent-cell';
-      tdDone.textContent = donePercent + '%';
+      const tdFloor = document.createElement('td');
+      tdFloor.textContent = getFloor(id);
       const tdQA = document.createElement('td');
       tdQA.className = 'percent-cell';
       tdQA.textContent = qaPercent + '%';
@@ -718,17 +704,14 @@
       tdStatus.textContent = ready ? 'Готов к отгрузке' : 'В работе';
 
       tr.appendChild(tdModule);
-      tr.appendChild(tdDone);
+      tr.appendChild(tdFloor);
       tr.appendChild(tdQA);
       tr.appendChild(tdStatus);
       tbody.appendChild(tr);
     }
 
-    const sectionDone = Math.round(sumDone / TOTAL_MODULES);
     const sectionQA = Math.round(sumQA / TOTAL_MODULES);
 
-    document.getElementById('sectionPercentDone').textContent =
-      'Выполнение секции: ' + sectionDone + '%';
     document.getElementById('sectionPercentQA').textContent =
       'Принято ОТК по секции: ' + sectionQA + '%';
 
@@ -747,11 +730,41 @@
   function resetCurrentModule() {
     const tasks = getTasksForModule(currentModuleId);
     const len = tasks.length;
-    modulesData[currentModuleId].doneTasks = Array(len).fill(false);
     modulesData[currentModuleId].qaTasks = Array(len).fill(false);
     renderTasks();
     updateSummaryTable();
     saveToStorage();
+  }
+
+  function exportSummaryToCsv() {
+    let rows = [];
+    rows.push(['Модуль', 'Этаж', '% ОТК', 'Статус']);
+
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = 'M' + i;
+      ensureModuleArraysSize(id);
+      const data = modulesData[id];
+      const qaPercent = calculatePercent(data.qaTasks);
+      const ready = qaPercent === 100;
+      const floor = getFloor(id);
+      const status = ready ? 'Готов к отгрузке' : 'В работе';
+
+      rows.push([id, String(floor), String(qaPercent) + '%', status]);
+    }
+
+    const csvContent = rows
+      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'svodka_cheryomushki.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -764,8 +777,6 @@
 
     document.getElementById('moduleSelect').addEventListener('change', (e) => {
       currentModuleId = e.target.value;
-      // при смене модуля оставляем выбранную группу (для обычных),
-      // для ЛЛУ она просто игнорируется
       renderTasks();
     });
 
@@ -781,8 +792,11 @@
     });
 
     document.getElementById('roleSelect').addEventListener('change', handleRoleChange);
+    document.getElementById('exportCsv').addEventListener('click', exportSummaryToCsv);
   });
 </script>
 </body>
 </html>
+
+
 
