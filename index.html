@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Контроль качества модулей</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      padding: 12px 24px 10px;
+      background: #1f2933;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    header small {
+      opacity: 0.8;
+      font-size: 13px;
+    }
+    .role-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+    .role-select {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      font-size: 13px;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    .role-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 2.2fr 1.3fr;
+      gap: 16px;
+      padding: 16px;
+    }
+    @media (max-width: 960px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    label {
+      font-size: 14px;
+    }
+    select {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd2e1;
+      font-size: 14px;
+    }
+    .small {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .tasks {
+      max-height: 60vh;
+      overflow: auto;
+      margin-top: 8px;
+      padding-right: 4px;
+    }
+    .task-item {
+      display: grid;
+      grid-template-columns: auto 80px 100px;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 6px 4px;
+      border-bottom: 1px solid #f0f2f7;
+      font-size: 13px;
+    }
+    .task-item:last-child {
+      border-bottom: none;
+    }
+    .task-text {
+      line-height: 1.3;
+    }
+    .task-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .task-checkbox input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+    }
+
+    .footer-status {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+    .percent-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .percent-line {
+      font-variant-numeric: tabular-nums;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .badge-ready {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #16a34a33;
+    }
+    .badge-not-ready {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #f9737333;
+    }
+    button {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd2e1;
+      background: #f9fafb;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #e5e7eb;
+    }
+
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .summary-table th,
+    .summary-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eef2f7;
+      text-align: left;
+    }
+    .summary-table th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .summary-body {
+      max-height: 60vh;
+      overflow: auto;
+    }
+    .row-ready {
+      background: #f0fdf4;
+    }
+    .percent-cell {
+      font-variant-numeric: tabular-nums;
+    }
+    .tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #4b5563;
+    }
+
+    .section-summary {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .section-summary-header {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 6px;
+    }
+    .section-summary-header h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .section-summary-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <div>
+      <h1>Контроль качества модулей</h1>
+      <small>Инженерно-отделочные работы · чек-лист ОТК</small>
+    </div>
+  </div>
+  <div class="role-bar">
+    <span>Режим работы:</span>
+    <select id="roleSelect" class="role-select">
+      <option value="viewer">Просмотр</option>
+      <option value="foreman">Производитель работ</option>
+      <option value="otk">ОТК</option>
+    </select>
+    <span id="roleBadge" class="role-badge">Только просмотр</span>
+    <span class="small">Для изменения галочек требуется пароль роли.</span>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-header">
+      <h2>Чек-лист по модулю</h2>
+      <div>
+        <label for="moduleSelect">Модуль:&nbsp;</label>
+        <select id="moduleSelect"></select>
+      </div>
+    </div>
+
+    <div class="small" id="moduleTypeHint">
+      Левые галочки — факт выполнения (производитель работ), правые — приёмка ОТК.
+    </div>
+
+    <div id="tasksContainer" class="tasks"></div>
+
+    <div class="footer-status">
+      <div class="percent-block">
+        <div id="percentDone" class="percent-line">Выполнение: 0%</div>
+        <div id="percentQA" class="percent-line">Принято ОТК: 0%</div>
+      </div>
+      <div id="statusBadge" class="badge badge-not-ready">
+        МОДУЛЬ не готов к отгрузке
+      </div>
+      <button id="resetModule">Сбросить модуль</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-summary">
+      <div class="section-summary-header">
+        <h2>Готовность секции</h2>
+        <span class="small">Черёмушки · Корпус 1 · 176 модулей (равный вес каждого модуля)</span>
+      </div>
+      <div class="section-summary-body">
+        <div class="percent-block">
+          <div id="sectionPercentDone" class="percent-line">Выполнение секции: 0%</div>
+          <div id="sectionPercentQA" class="percent-line">Принято ОТК по секции: 0%</div>
+        </div>
+        <div id="sectionStatusBadge" class="badge badge-not-ready">
+          Секция не готова
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-header">
+      <h2>Сводка по модулям</h2>
+      <span class="tag" id="summaryReadyCount">Готово: 0 модулей</span>
+    </div>
+    <div class="small">
+      В таблице отображаются % выполнения и % приёмки ОТК.  
+      Секция считается готовой, если средний % ОТК = 100%.
+    </div>
+    <div class="summary-body">
+      <table class="summary-table">
+        <thead>
+        <tr>
+          <th>Модуль</th>
+          <th>% выполнения</th>
+          <th>% ОТК</th>
+          <th>Статус</th>
+        </tr>
+        </thead>
+        <tbody id="summaryTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+  const TOTAL_MODULES = 176;
+  const STORAGE_KEY = 'qa_modules_data_v3'; // новая версия
+
+  const ROLE_PASSWORDS = {
+    foreman: 'prod123',
+    otk: 'otk123'
+  };
+
+  const ROLE_LABELS = {
+    viewer: 'Только просмотр',
+    foreman: 'Режим производителя работ',
+    otk: 'Режим ОТК'
+  };
+
+  // Обычные модули
+  const TASKS_STANDARD = [
+    "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
+    "Смонтированный сантехнический модуль с залитым технологическим швом по контуру.",
+    "Завершённая внутренняя отделка сантехнического модуля с установленным санфаянсом и смесителями.",
+    "Потолок из металлического профиля, зашитый цементно-перлитовыми плитами с проклейкой стыков лентой Герлен. Крепление потолка на анкерах.",
+    "Установка распределительных коробок, подрозетников и прокладка кабеля с расключением.",
+    "Монтаж квартирных электрических щитков.",
+    "Установка гильз-пакетов ЭОМ в местах общего пользования (МОП).",
+    "Выполненная внутренняя квартирная разводка вентиляции.",
+    "Монтаж дымоудаления и дымоприёмников.",
+    "Монтаж вентиляционных систем в МОП.",
+    "Монтаж системы пожаротушения и главного стояка.",
+    "Монтаж системы водоснабжения и канализации (+ стояк К1).",
+    "Монтаж стояка К2.",
+    "Монтаж стояков отопления.",
+    "Установка радиаторов.",
+    "Зачеканка технических отверстий инженерных коммуникаций (вентиляция, К1).",
+    "Монтаж металлического каркаса зашивки инженерных коммуникаций МОП.",
+    "Устройство противопожарных отсечек инженерных коммуникаций МОП.",
+    "Установка оконных и дверных блоков из алюминия и ПВХ с монтажом стеклопакетов, фурнитуры и герметизацией швов.",
+    "Монтаж подоконников и устройство откосов.",
+    "Укладка плитки фартука, кухни, коридора, МОП и балкона с последующей затиркой.",
+    "Устройство мокрого штукатурного фасада балкона.",
+    "Монтаж кронштейнов и горизонтального профиля подсистемы НВФ.",
+    "Монтаж утеплителя по фасаду модуля."
+  ];
+
+  // Модули ЛЛУ (М5, М13, М21, ...)
+  const TASKS_LLU = [
+    "Монтаж дверей ЛЛУ.",
+    "Установка оконных блоков с монтажом стеклопакетов и зачеканкой швов.",
+    "Укладка плитки ЛЛУ.",
+    "Зашивка торцов лестничных маршей.",
+    "Окраска плит переходных площадок.",
+    "Монтаж лифтового оборудования ЛЛУ."
+  ];
+
+  // Список модулей ЛЛУ по шаблону 5 + 8*n
+  const LLU_MODULES = new Set();
+  (function initLluModules() {
+    for (let n = 0; ; n++) {
+      const num = 5 + 8 * n;
+      if (num > TOTAL_MODULES) break;
+      LLU_MODULES.add('M' + num);
+    }
+  })();
+
+  function isLluModule(moduleId) {
+    return LLU_MODULES.has(moduleId);
+  }
+
+  function getTasksForModule(moduleId) {
+    return isLluModule(moduleId) ? TASKS_LLU : TASKS_STANDARD;
+  }
+
+  let modulesData = {}; // { M1: { doneTasks:[], qaTasks:[] }, ... }
+  let currentModuleId = 'M1';
+  let currentRole = 'viewer';
+  const authenticatedRoles = { foreman: false, otk: false };
+
+  function ensureModuleArraysSize(moduleId) {
+    const tasks = getTasksForModule(moduleId);
+    const len = tasks.length;
+
+    if (!modulesData[moduleId]) {
+      modulesData[moduleId] = {
+        doneTasks: Array(len).fill(false),
+        qaTasks: Array(len).fill(false)
+      };
+      return;
+    }
+
+    const m = modulesData[moduleId];
+
+    if (!Array.isArray(m.doneTasks)) m.doneTasks = [];
+    if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
+
+    const newDone = Array(len).fill(false);
+    const newQA = Array(len).fill(false);
+
+    for (let i = 0; i < Math.min(len, m.doneTasks.length); i++) {
+      newDone[i] = !!m.doneTasks[i];
+    }
+    for (let i = 0; i < Math.min(len, m.qaTasks.length); i++) {
+      newQA[i] = !!m.qaTasks[i];
+    }
+
+    m.doneTasks = newDone;
+    m.qaTasks = newQA;
+  }
+
+  function initModulesData() {
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = 'M' + i;
+      ensureModuleArraysSize(id);
+    }
+  }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          modulesData = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Ошибка чтения localStorage', e);
+    }
+    initModulesData();
+  }
+
+  function saveToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(modulesData));
+    } catch (e) {
+      console.warn('Ошибка записи localStorage', e);
+    }
+  }
+
+  function calculatePercent(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) return 0;
+    const total = arr.length;
+    const done = arr.filter(Boolean).length;
+    return Math.round((done / total) * 100);
+  }
+
+  function updateRoleUI() {
+    const badge = document.getElementById('roleBadge');
+    badge.textContent = ROLE_LABELS[currentRole] || '';
+    renderTasks();
+  }
+
+  function setRole(role) {
+    currentRole = role;
+    document.getElementById('roleSelect').value = role;
+    updateRoleUI();
+  }
+
+  function handleRoleChange(e) {
+    const newRole = e.target.value;
+    if (newRole === 'viewer') {
+      setRole('viewer');
+      return;
+    }
+
+    if (authenticatedRoles[newRole]) {
+      setRole(newRole);
+      return;
+    }
+
+    const label = newRole === 'foreman' ? 'Производитель работ' : 'ОТК';
+    const pwd = prompt(`Введите пароль для роли "${label}":`);
+    if (pwd === ROLE_PASSWORDS[newRole]) {
+      authenticatedRoles[newRole] = true;
+      setRole(newRole);
+    } else {
+      alert('Неверный пароль');
+      e.target.value = currentRole;
+    }
+  }
+
+  function populateModuleSelect() {
+    const select = document.getElementById('moduleSelect');
+    select.innerHTML = '';
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = 'M' + i;
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = id + (isLluModule(id) ? ' (ЛЛУ)' : '');
+      select.appendChild(option);
+    }
+    select.value = currentModuleId;
+  }
+
+  function updateModuleTypeHint() {
+    const hint = document.getElementById('moduleTypeHint');
+    if (isLluModule(currentModuleId)) {
+      hint.textContent =
+        'Модуль ЛЛУ. Левые галочки — факт выполнения (производитель работ), правые — приёмка ОТК (список работ для ЛЛУ).';
+    } else {
+      hint.textContent =
+        'Обычный модуль. Левые галочки — факт выполнения (производитель работ), правые — приёмка ОТК.';
+    }
+  }
+
+  function renderTasks() {
+    ensureModuleArraysSize(currentModuleId);
+    const container = document.getElementById('tasksContainer');
+    container.innerHTML = '';
+
+    const tasks = getTasksForModule(currentModuleId);
+    const moduleData = modulesData[currentModuleId];
+
+    tasks.forEach((text, index) => {
+      const item = document.createElement('div');
+      item.className = 'task-item';
+
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'task-text';
+      labelDiv.textContent = (index + 1) + '. ' + text;
+
+      const doneWrapper = document.createElement('label');
+      doneWrapper.className = 'task-checkbox';
+      const doneCheckbox = document.createElement('input');
+      doneCheckbox.type = 'checkbox';
+      doneCheckbox.checked = moduleData.doneTasks[index];
+      doneCheckbox.disabled = currentRole !== 'foreman';
+      doneCheckbox.addEventListener('change', () => {
+        if (currentRole !== 'foreman') return;
+        moduleData.doneTasks[index] = doneCheckbox.checked;
+        updateModuleStats();
+        updateSummaryTable();
+        saveToStorage();
+      });
+      doneWrapper.appendChild(doneCheckbox);
+      doneWrapper.appendChild(document.createTextNode('Выполнено'));
+
+      const qaWrapper = document.createElement('label');
+      qaWrapper.className = 'task-checkbox';
+      const qaCheckbox = document.createElement('input');
+      qaCheckbox.type = 'checkbox';
+      qaCheckbox.checked = moduleData.qaTasks[index];
+      qaCheckbox.disabled = currentRole !== 'otk';
+      qaCheckbox.addEventListener('change', () => {
+        if (currentRole !== 'otk') return;
+        moduleData.qaTasks[index] = qaCheckbox.checked;
+        updateModuleStats();
+        updateSummaryTable();
+        saveToStorage();
+      });
+      qaWrapper.appendChild(qaCheckbox);
+      qaWrapper.appendChild(document.createTextNode('Принято ОТК'));
+
+      item.appendChild(labelDiv);
+      item.appendChild(doneWrapper);
+      item.appendChild(qaWrapper);
+      container.appendChild(item);
+    });
+
+    updateModuleTypeHint();
+  }
+
+  function updateModuleStats() {
+    ensureModuleArraysSize(currentModuleId);
+    const moduleData = modulesData[currentModuleId];
+    const donePercent = calculatePercent(moduleData.doneTasks);
+    const qaPercent = calculatePercent(moduleData.qaTasks);
+
+    document.getElementById('percentDone').textContent = 'Выполнение: ' + donePercent + '%';
+    document.getElementById('percentQA').textContent = 'Принято ОТК: ' + qaPercent + '%';
+
+    const badgeEl = document.getElementById('statusBadge');
+    const ready = qaPercent === 100;
+    badgeEl.textContent = ready
+      ? 'МОДУЛЬ готов к отгрузке'
+      : 'МОДУЛЬ не готов к отгрузке';
+    badgeEl.className = 'badge ' + (ready ? 'badge-ready' : 'badge-not-ready');
+  }
+
+  function updateSummaryTable() {
+    const tbody = document.getElementById('summaryTableBody');
+    tbody.innerHTML = '';
+
+    let readyCount = 0;
+    let sumDone = 0;
+    let sumQA = 0;
+
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = 'M' + i;
+      ensureModuleArraysSize(id);
+      const data = modulesData[id];
+      const donePercent = calculatePercent(data.doneTasks);
+      const qaPercent = calculatePercent(data.qaTasks);
+      const ready = qaPercent === 100;
+
+      sumDone += donePercent;
+      sumQA += qaPercent;
+      if (ready) readyCount++;
+
+      const tr = document.createElement('tr');
+      if (ready) tr.classList.add('row-ready');
+
+      const tdModule = document.createElement('td');
+      tdModule.textContent = id + (isLluModule(id) ? ' (ЛЛУ)' : '');
+      const tdDone = document.createElement('td');
+      tdDone.className = 'percent-cell';
+      tdDone.textContent = donePercent + '%';
+      const tdQA = document.createElement('td');
+      tdQA.className = 'percent-cell';
+      tdQA.textContent = qaPercent + '%';
+      const tdStatus = document.createElement('td');
+      tdStatus.textContent = ready ? 'Готов к отгрузке' : 'В работе';
+
+      tr.appendChild(tdModule);
+      tr.appendChild(tdDone);
+      tr.appendChild(tdQA);
+      tr.appendChild(tdStatus);
+      tbody.appendChild(tr);
+    }
+
+    const sectionDone = Math.round(sumDone / TOTAL_MODULES);
+    const sectionQA = Math.round(sumQA / TOTAL_MODULES);
+
+    document.getElementById('sectionPercentDone').textContent =
+      'Выполнение секции: ' + sectionDone + '%';
+    document.getElementById('sectionPercentQA').textContent =
+      'Принято ОТК по секции: ' + sectionQA + '%';
+
+    const sectionStatusBadge = document.getElementById('sectionStatusBadge');
+    const sectionReady = sectionQA === 100;
+    sectionStatusBadge.textContent = sectionReady
+      ? 'Секция готова к сдаче'
+      : 'Секция не готова';
+    sectionStatusBadge.className =
+      'badge ' + (sectionReady ? 'badge-ready' : 'badge-not-ready');
+
+    document.getElementById('summaryReadyCount').textContent =
+      'Готово: ' + readyCount + ' модулей';
+  }
+
+  function resetCurrentModule() {
+    const tasks = getTasksForModule(currentModuleId);
+    const len = tasks.length;
+    modulesData[currentModuleId].doneTasks = Array(len).fill(false);
+    modulesData[currentModuleId].qaTasks = Array(len).fill(false);
+    renderTasks();
+    updateModuleStats();
+    updateSummaryTable();
+    saveToStorage();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
+    populateModuleSelect();
+    renderTasks();
+    updateModuleStats();
+    updateSummaryTable();
+    updateRoleUI();
+
+    document.getElementById('moduleSelect').addEventListener('change', (e) => {
+      currentModuleId = e.target.value;
+      renderTasks();
+      updateModuleStats();
+    });
+
+    document.getElementById('resetModule').addEventListener('click', () => {
+      if (confirm('Сбросить все отметки по ' + currentModuleId + '?')) {
+        resetCurrentModule();
+      }
+    });
+
+    document.getElementById('roleSelect').addEventListener('change', handleRoleChange);
+  });
+</script>
+</body>
+</html>
