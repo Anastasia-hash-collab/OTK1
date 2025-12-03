@@ -358,16 +358,18 @@
 </main>
 
 <script>
+  // URL твоего backend на Render
+  const API_BASE_URL = "https://qc-backend-2zbk.onrender.com";
+
   const TOTAL_MODULES = 176;
-  const STORAGE_KEY = 'qa_modules_data_v4'; // новая версия, только ОТК
 
   const ROLE_PASSWORDS = {
-    otk: 'otk123'
+    otk: "otk123"
   };
 
   const ROLE_LABELS = {
-    viewer: 'Только просмотр',
-    otk: 'Режим ОТК (можно проставлять галочки)'
+    viewer: "Только просмотр",
+    otk: "Режим ОТК (можно проставлять галочки)"
   };
 
   // Обычные модули: 24 задачи
@@ -425,7 +427,7 @@
     for (let n = 0; ; n++) {
       const num = 5 + 8 * n;
       if (num > TOTAL_MODULES) break;
-      LLU_MODULES.add('M' + num);
+      LLU_MODULES.add("M" + num);
     }
   })();
 
@@ -448,12 +450,12 @@
     }
     const nums = GROUP_INDICES[currentGroup] || [];
     return nums
-      .map(n => n - 1)
-      .filter(i => i >= 0 && i < TASKS_STANDARD.length);
+      .map((n) => n - 1)
+      .filter((i) => i >= 0 && i < TASKS_STANDARD.length);
   }
 
   function getModuleNumber(moduleId) {
-    return parseInt(moduleId.replace('M', ''), 10) || 1;
+    return parseInt(moduleId.replace("M", ""), 10) || 1;
   }
 
   function getFloor(moduleId) {
@@ -462,10 +464,43 @@
   }
 
   let modulesData = {}; // { M1: { qaTasks:[] }, ... }
-  let currentModuleId = 'M1';
-  let currentRole = 'viewer';
-  let currentGroup = 'Все работы';
+  let currentModuleId = "M1";
+  let currentRole = "viewer";
+  let currentGroup = "Все работы";
   const authenticatedRoles = { otk: false };
+
+  // ====== работа с backend (Яндекс.Диск через Render) ======
+
+  async function loadModulesFromServer() {
+    try {
+      const resp = await fetch(API_BASE_URL + "/load-modules");
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const data = await resp.json();
+      if (data && typeof data === "object") {
+        modulesData = data;
+      } else {
+        modulesData = {};
+      }
+    } catch (e) {
+      console.warn("Не удалось загрузить данные с сервера, начнём с пустых:", e);
+      modulesData = {};
+    }
+    initModulesData();
+  }
+
+  async function saveModulesToServer() {
+    try {
+      await fetch(API_BASE_URL + "/save-modules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(modulesData)
+      });
+    } catch (e) {
+      console.warn("Не удалось сохранить данные на сервер:", e);
+    }
+  }
+
+  // ====== локальная логика ======
 
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
@@ -490,31 +525,8 @@
 
   function initModulesData() {
     for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = 'M' + i;
+      const id = "M" + i;
       ensureModuleArraysSize(id);
-    }
-  }
-
-  function loadFromStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          modulesData = parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Ошибка чтения localStorage', e);
-    }
-    initModulesData();
-  }
-
-  function saveToStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(modulesData));
-    } catch (e) {
-      console.warn('Ошибка записи localStorage', e);
     }
   }
 
@@ -526,21 +538,21 @@
   }
 
   function updateRoleUI() {
-    const badge = document.getElementById('roleBadge');
-    badge.textContent = ROLE_LABELS[currentRole] || '';
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = ROLE_LABELS[currentRole] || "";
     renderTasks();
   }
 
   function setRole(role) {
     currentRole = role;
-    document.getElementById('roleSelect').value = role;
+    document.getElementById("roleSelect").value = role;
     updateRoleUI();
   }
 
   function handleRoleChange(e) {
     const newRole = e.target.value;
-    if (newRole === 'viewer') {
-      setRole('viewer');
+    if (newRole === "viewer") {
+      setRole("viewer");
       return;
     }
 
@@ -549,34 +561,34 @@
       return;
     }
 
-    const pwd = prompt('Введите пароль для ОТК:');
+    const pwd = prompt("Введите пароль для ОТК:");
     if (pwd === ROLE_PASSWORDS[newRole]) {
       authenticatedRoles[newRole] = true;
       setRole(newRole);
     } else {
-      alert('Неверный пароль');
+      alert("Неверный пароль");
       e.target.value = currentRole;
     }
   }
 
   function populateModuleSelect() {
-    const select = document.getElementById('moduleSelect');
-    select.innerHTML = '';
+    const select = document.getElementById("moduleSelect");
+    select.innerHTML = "";
     for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = 'M' + i;
-      const option = document.createElement('option');
+      const id = "M" + i;
+      const option = document.createElement("option");
       option.value = id;
-      option.textContent = id + (isLluModule(id) ? ' (ЛЛУ)' : '');
+      option.textContent = id + (isLluModule(id) ? " (ЛЛУ)" : "");
       select.appendChild(option);
     }
     select.value = currentModuleId;
   }
 
   function populateGroupSelect() {
-    const select = document.getElementById('groupSelect');
-    select.innerHTML = '';
-    GROUP_NAMES.forEach(name => {
-      const opt = document.createElement('option');
+    const select = document.getElementById("groupSelect");
+    select.innerHTML = "";
+    GROUP_NAMES.forEach((name) => {
+      const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name;
       select.appendChild(opt);
@@ -585,24 +597,24 @@
   }
 
   function updateModuleTypeHint() {
-    const hint = document.getElementById('moduleTypeHint');
+    const hint = document.getElementById("moduleTypeHint");
     if (isLluModule(currentModuleId)) {
       hint.textContent =
-        'Модуль ЛЛУ. Группы не применяются, отображаются все виды работ ЛЛУ. Галочки ставит только ОТК.';
+        "Модуль ЛЛУ. Группы не применяются, отображаются все виды работ ЛЛУ. Галочки ставит только ОТК.";
     } else {
       hint.textContent =
-        'Обычный модуль. Можно отфильтровать работы по группе (СТК, ВИС, ЭОМ, Потолки, Фасад, Отделка). Галочки ставит только ОТК.';
+        "Обычный модуль. Можно отфильтровать работы по группе (СТК, ВИС, ЭОМ, Потолки, Фасад, Отделка). Галочки ставит только ОТК.";
     }
   }
 
   function updateModuleFloorInfo() {
-    const el = document.getElementById('moduleFloorInfo');
+    const el = document.getElementById("moduleFloorInfo");
     const floor = getFloor(currentModuleId);
-    el.textContent = 'Этаж: ' + floor;
+    el.textContent = "Этаж: " + floor;
   }
 
   function updateGroupUIForModule() {
-    const select = document.getElementById('groupSelect');
+    const select = document.getElementById("groupSelect");
     if (!select) return;
     if (isLluModule(currentModuleId)) {
       select.disabled = true;
@@ -614,8 +626,8 @@
   function renderTasks() {
     ensureModuleArraysSize(currentModuleId);
 
-    const container = document.getElementById('tasksContainer');
-    container.innerHTML = '';
+    const container = document.getElementById("tasksContainer");
+    container.innerHTML = "";
 
     updateModuleTypeHint();
     updateModuleFloorInfo();
@@ -627,28 +639,28 @@
     const indices = getVisibleTaskIndices(currentModuleId);
 
     indices.forEach((taskIndex) => {
-      const item = document.createElement('div');
-      item.className = 'task-item';
+      const item = document.createElement("div");
+      item.className = "task-item";
 
-      const labelDiv = document.createElement('div');
-      labelDiv.className = 'task-text';
-      labelDiv.textContent = (taskIndex + 1) + '. ' + baseTasks[taskIndex];
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "task-text";
+      labelDiv.textContent = taskIndex + 1 + ". " + baseTasks[taskIndex];
 
-      const qaWrapper = document.createElement('label');
-      qaWrapper.className = 'task-checkbox';
-      const qaCheckbox = document.createElement('input');
-      qaCheckbox.type = 'checkbox';
+      const qaWrapper = document.createElement("label");
+      qaWrapper.className = "task-checkbox";
+      const qaCheckbox = document.createElement("input");
+      qaCheckbox.type = "checkbox";
       qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-      qaCheckbox.disabled = currentRole !== 'otk';
-      qaCheckbox.addEventListener('change', () => {
-        if (currentRole !== 'otk') return;
+      qaCheckbox.disabled = currentRole !== "otk";
+      qaCheckbox.addEventListener("change", () => {
+        if (currentRole !== "otk") return;
         moduleData.qaTasks[taskIndex] = qaCheckbox.checked;
         updateModuleStats();
         updateSummaryTable();
-        saveToStorage();
+        saveModulesToServer();
       });
       qaWrapper.appendChild(qaCheckbox);
-      qaWrapper.appendChild(document.createTextNode('Принято ОТК'));
+      qaWrapper.appendChild(document.createTextNode("Принято ОТК"));
 
       item.appendChild(labelDiv);
       item.appendChild(qaWrapper);
@@ -663,25 +675,26 @@
     const moduleData = modulesData[currentModuleId];
     const qaPercent = calculatePercent(moduleData.qaTasks);
 
-    document.getElementById('percentQA').textContent = 'Принято ОТК: ' + qaPercent + '%';
+    document.getElementById("percentQA").textContent =
+      "Принято ОТК: " + qaPercent + "%";
 
-    const badgeEl = document.getElementById('statusBadge');
+    const badgeEl = document.getElementById("statusBadge");
     const ready = qaPercent === 100;
     badgeEl.textContent = ready
-      ? 'МОДУЛЬ готов к отгрузке'
-      : 'МОДУЛЬ не готов к отгрузке';
-    badgeEl.className = 'badge ' + (ready ? 'badge-ready' : 'badge-not-ready');
+      ? "МОДУЛЬ готов к отгрузке"
+      : "МОДУЛЬ не готов к отгрузке";
+    badgeEl.className = "badge " + (ready ? "badge-ready" : "badge-not-ready");
   }
 
   function updateSummaryTable() {
-    const tbody = document.getElementById('summaryTableBody');
-    tbody.innerHTML = '';
+    const tbody = document.getElementById("summaryTableBody");
+    tbody.innerHTML = "";
 
     let readyCount = 0;
     let sumQA = 0;
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = 'M' + i;
+      const id = "M" + i;
       ensureModuleArraysSize(id);
       const data = modulesData[id];
       const qaPercent = calculatePercent(data.qaTasks);
@@ -690,18 +703,18 @@
       sumQA += qaPercent;
       if (ready) readyCount++;
 
-      const tr = document.createElement('tr');
-      if (ready) tr.classList.add('row-ready');
+      const tr = document.createElement("tr");
+      if (ready) tr.classList.add("row-ready");
 
-      const tdModule = document.createElement('td');
-      tdModule.textContent = id + (isLluModule(id) ? ' (ЛЛУ)' : '');
-      const tdFloor = document.createElement('td');
+      const tdModule = document.createElement("td");
+      tdModule.textContent = id + (isLluModule(id) ? " (ЛЛУ)" : "");
+      const tdFloor = document.createElement("td");
       tdFloor.textContent = getFloor(id);
-      const tdQA = document.createElement('td');
-      tdQA.className = 'percent-cell';
-      tdQA.textContent = qaPercent + '%';
-      const tdStatus = document.createElement('td');
-      tdStatus.textContent = ready ? 'Готов к отгрузке' : 'В работе';
+      const tdQA = document.createElement("td");
+      tdQA.className = "percent-cell";
+      tdQA.textContent = qaPercent + "%";
+      const tdStatus = document.createElement("td");
+      tdStatus.textContent = ready ? "Готов к отгрузке" : "В работе";
 
       tr.appendChild(tdModule);
       tr.appendChild(tdFloor);
@@ -712,19 +725,19 @@
 
     const sectionQA = Math.round(sumQA / TOTAL_MODULES);
 
-    document.getElementById('sectionPercentQA').textContent =
-      'Принято ОТК по секции: ' + sectionQA + '%';
+    document.getElementById("sectionPercentQA").textContent =
+      "Принято ОТК по секции: " + sectionQA + "%";
 
-    const sectionStatusBadge = document.getElementById('sectionStatusBadge');
+    const sectionStatusBadge = document.getElementById("sectionStatusBadge");
     const sectionReady = sectionQA === 100;
     sectionStatusBadge.textContent = sectionReady
-      ? 'Секция готова к сдаче'
-      : 'Секция не готова';
+      ? "Секция готова к сдаче"
+      : "Секция не готова";
     sectionStatusBadge.className =
-      'badge ' + (sectionReady ? 'badge-ready' : 'badge-not-ready');
+      "badge " + (sectionReady ? "badge-ready" : "badge-not-ready");
 
-    document.getElementById('summaryReadyCount').textContent =
-      'Готово: ' + readyCount + ' модулей';
+    document.getElementById("summaryReadyCount").textContent =
+      "Готово: " + readyCount + " модулей";
   }
 
   function resetCurrentModule() {
@@ -733,70 +746,73 @@
     modulesData[currentModuleId].qaTasks = Array(len).fill(false);
     renderTasks();
     updateSummaryTable();
-    saveToStorage();
+    saveModulesToServer();
   }
 
   function exportSummaryToCsv() {
     let rows = [];
-    rows.push(['Модуль', 'Этаж', '% ОТК', 'Статус']);
+    rows.push(["Модуль", "Этаж", "% ОТК", "Статус"]);
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = 'M' + i;
+      const id = "M" + i;
       ensureModuleArraysSize(id);
       const data = modulesData[id];
       const qaPercent = calculatePercent(data.qaTasks);
       const ready = qaPercent === 100;
       const floor = getFloor(id);
-      const status = ready ? 'Готов к отгрузке' : 'В работе';
+      const status = ready ? "Готов к отгрузке" : "В работе";
 
-      rows.push([id, String(floor), String(qaPercent) + '%', status]);
+      rows.push([id, String(floor), String(qaPercent) + "%", status]);
     }
 
     const csvContent = rows
-      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'))
-      .join('\r\n');
+      .map((row) =>
+        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(";")
+      )
+      .join("\r\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'svodka_cheryomushki.csv';
+    a.download = "svodka_cheryomushki.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage();
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadModulesFromServer();
     populateModuleSelect();
     populateGroupSelect();
     renderTasks();
     updateSummaryTable();
     updateRoleUI();
 
-    document.getElementById('moduleSelect').addEventListener('change', (e) => {
+    document.getElementById("moduleSelect").addEventListener("change", (e) => {
       currentModuleId = e.target.value;
       renderTasks();
     });
 
-    document.getElementById('groupSelect').addEventListener('change', (e) => {
+    document.getElementById("groupSelect").addEventListener("change", (e) => {
       currentGroup = e.target.value;
       renderTasks();
     });
 
-    document.getElementById('resetModule').addEventListener('click', () => {
-      if (confirm('Сбросить все отметки по ' + currentModuleId + '?')) {
+    document.getElementById("resetModule").addEventListener("click", () => {
+      if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
         resetCurrentModule();
       }
     });
 
-    document.getElementById('roleSelect').addEventListener('change', handleRoleChange);
-    document.getElementById('exportCsv').addEventListener('click', exportSummaryToCsv);
+    document
+      .getElementById("roleSelect")
+      .addEventListener("change", handleRoleChange);
+    document
+      .getElementById("exportCsv")
+      .addEventListener("click", exportSummaryToCsv);
   });
 </script>
 </body>
 </html>
-
-
-
