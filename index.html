@@ -357,9 +357,26 @@
   </section>
 </main>
 
+<!-- Firebase SDK (compat-версия, чтобы было проще) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
 <script>
-  // URL твоего backend на Render
-  const API_BASE_URL = "https://qc-backend-2zbk.onrender.com";
+ const firebaseConfig = {
+  apiKey: "AIzaSyBwWguFZ48BuuYpIG8nEX1zHAIx3BOXFsI",
+  authDomain: "qc-modules.firebaseapp.com",
+  projectId: "qc-modules",
+  storageBucket: "qc-modules.firebasestorage.app",
+  messagingSenderId: "430400564818",
+  appId: "1:430400564818:web:2e46915026cedd4323798b",
+  measurementId: "G-LHCERM1GLW"
+};
+
+  // Инициализация Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  // один документ для всей секции
+  const docRef = db.collection("qc_modules").doc("section1");
 
   const TOTAL_MODULES = 176;
 
@@ -468,39 +485,6 @@
   let currentRole = "viewer";
   let currentGroup = "Все работы";
   const authenticatedRoles = { otk: false };
-
-  // ====== работа с backend (Яндекс.Диск через Render) ======
-
-  async function loadModulesFromServer() {
-    try {
-      const resp = await fetch(API_BASE_URL + "/load-modules");
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const data = await resp.json();
-      if (data && typeof data === "object") {
-        modulesData = data;
-      } else {
-        modulesData = {};
-      }
-    } catch (e) {
-      console.warn("Не удалось загрузить данные с сервера, начнём с пустых:", e);
-      modulesData = {};
-    }
-    initModulesData();
-  }
-
-  async function saveModulesToServer() {
-    try {
-      await fetch(API_BASE_URL + "/save-modules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(modulesData)
-      });
-    } catch (e) {
-      console.warn("Не удалось сохранить данные на сервер:", e);
-    }
-  }
-
-  // ====== локальная логика ======
 
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
@@ -623,53 +607,6 @@
     }
   }
 
-  function renderTasks() {
-    ensureModuleArraysSize(currentModuleId);
-
-    const container = document.getElementById("tasksContainer");
-    container.innerHTML = "";
-
-    updateModuleTypeHint();
-    updateModuleFloorInfo();
-    updateGroupUIForModule();
-
-    const moduleData = modulesData[currentModuleId];
-    const isLlu = isLluModule(currentModuleId);
-    const baseTasks = isLlu ? TASKS_LLU : TASKS_STANDARD;
-    const indices = getVisibleTaskIndices(currentModuleId);
-
-    indices.forEach((taskIndex) => {
-      const item = document.createElement("div");
-      item.className = "task-item";
-
-      const labelDiv = document.createElement("div");
-      labelDiv.className = "task-text";
-      labelDiv.textContent = taskIndex + 1 + ". " + baseTasks[taskIndex];
-
-      const qaWrapper = document.createElement("label");
-      qaWrapper.className = "task-checkbox";
-      const qaCheckbox = document.createElement("input");
-      qaCheckbox.type = "checkbox";
-      qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-      qaCheckbox.disabled = currentRole !== "otk";
-      qaCheckbox.addEventListener("change", () => {
-        if (currentRole !== "otk") return;
-        moduleData.qaTasks[taskIndex] = qaCheckbox.checked;
-        updateModuleStats();
-        updateSummaryTable();
-        saveModulesToServer();
-      });
-      qaWrapper.appendChild(qaCheckbox);
-      qaWrapper.appendChild(document.createTextNode("Принято ОТК"));
-
-      item.appendChild(labelDiv);
-      item.appendChild(qaWrapper);
-      container.appendChild(item);
-    });
-
-    updateModuleStats();
-  }
-
   function updateModuleStats() {
     ensureModuleArraysSize(currentModuleId);
     const moduleData = modulesData[currentModuleId];
@@ -746,7 +683,7 @@
     modulesData[currentModuleId].qaTasks = Array(len).fill(false);
     renderTasks();
     updateSummaryTable();
-    saveModulesToServer();
+    saveToFirestore();
   }
 
   function exportSummaryToCsv() {
@@ -782,8 +719,78 @@
     URL.revokeObjectURL(url);
   }
 
+  async function loadFromFirestore() {
+    try {
+      const snap = await docRef.get();
+      if (snap.exists) {
+        const data = snap.data();
+        if (data && data.modulesData && typeof data.modulesData === "object") {
+          modulesData = data.modulesData;
+        }
+      }
+    } catch (e) {
+      console.warn("Не удалось загрузить из Firestore:", e);
+    }
+    initModulesData();
+  }
+
+  async function saveToFirestore() {
+    try {
+      await docRef.set({ modulesData }, { merge: true });
+    } catch (e) {
+      console.warn("Не удалось сохранить в Firestore:", e);
+    }
+  }
+
+  function renderTasks() {
+    ensureModuleArraysSize(currentModuleId);
+
+    const container = document.getElementById("tasksContainer");
+    container.innerHTML = "";
+
+    updateModuleTypeHint();
+    updateModuleFloorInfo();
+    updateGroupUIForModule();
+
+    const moduleData = modulesData[currentModuleId];
+    const isLlu = isLluModule(currentModuleId);
+    const baseTasks = isLlu ? TASKS_LLU : TASKS_STANDARD;
+    const indices = getVisibleTaskIndices(currentModuleId);
+
+    indices.forEach((taskIndex) => {
+      const item = document.createElement("div");
+      item.className = "task-item";
+
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "task-text";
+      labelDiv.textContent = taskIndex + 1 + ". " + baseTasks[taskIndex];
+
+      const qaWrapper = document.createElement("label");
+      qaWrapper.className = "task-checkbox";
+      const qaCheckbox = document.createElement("input");
+      qaCheckbox.type = "checkbox";
+      qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+      qaCheckbox.disabled = currentRole !== "otk";
+      qaCheckbox.addEventListener("change", () => {
+        if (currentRole !== "otk") return;
+        moduleData.qaTasks[taskIndex] = qaCheckbox.checked;
+        updateModuleStats();
+        updateSummaryTable();
+        saveToFirestore();
+      });
+      qaWrapper.appendChild(qaCheckbox);
+      qaWrapper.appendChild(document.createTextNode("Принято ОТК"));
+
+      item.appendChild(labelDiv);
+      item.appendChild(qaWrapper);
+      container.appendChild(item);
+    });
+
+    updateModuleStats();
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
-    await loadModulesFromServer();
+    await loadFromFirestore();
     populateModuleSelect();
     populateGroupSelect();
     renderTasks();
