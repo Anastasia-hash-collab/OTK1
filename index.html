@@ -531,8 +531,11 @@
             <div class="progress-label">Текущий модуль</div>
           </div>
         </div>
-        <span id="statusBadge" class="badge badge-not-ready">Не начато</span>
-        <button id="resetModule">Сбросить все</button>
+       <span id="statusBadge" class="badge badge-not-ready">Не начато</span>
+<div style="display:flex; gap:6px; flex-wrap:wrap;">
+  <button id="exportModuleCsv">Экспорт чек-листа</button>
+  <button id="resetModule">Сбросить все</button>
+</div>
       </div>
     </section>
   </div>
@@ -996,7 +999,10 @@
       )
       .join("\r\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(
+  ["\uFEFF" + csvContent],
+  { type: "text/csv;charset=utf-8;" }
+);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1006,6 +1012,49 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+ function exportModuleChecklistToCsv() {
+  const moduleId = currentModuleId;
+  const floor = getFloor(moduleId);
+  ensureModuleArraysSize(moduleId);
+
+  const tasks = getTasksForModule(moduleId);
+  const moduleData = modulesData[moduleId];
+
+  let rows = [];
+  rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК"]);
+
+  tasks.forEach((taskText, index) => {
+    const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
+    rows.push([
+      moduleId,
+      String(floor),
+      String(index + 1),
+      taskText,
+      accepted
+    ]);
+  });
+
+  const csvContent = rows
+    .map(row =>
+      row
+        .map(field => `"${String(field).replace(/"/g, '""')}"`)
+        .join(";")
+    )
+    .join("\r\n");
+
+  const blob = new Blob(
+  ["\uFEFF" + csvContent],
+  { type: "text/csv;charset=utf-8;" }
+);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `checklist_${moduleId}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
   async function loadFromFirestore() {
     try {
@@ -1163,10 +1212,14 @@ function getColorForPercent(p) {
     document
       .getElementById("exportCsv")
       .addEventListener("click", exportSummaryToCsv);
+   document
+  .getElementById("exportModuleCsv")
+  .addEventListener("click", exportModuleChecklistToCsv);
   });
 </script>
 </body>
 </html>
+
 
 
 
