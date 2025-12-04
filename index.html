@@ -480,9 +480,10 @@
   <div class="role-bar">
     <span>Режим:</span>
     <select id="roleSelect" class="role-select">
-      <option value="viewer">Просмотр</option>
-      <option value="otk">ОТК</option>
-    </select>
+  <option value="viewer">Просмотр</option>
+  <option value="otk">ОТК</option>
+  <option value="chief">Рук. ОТК</option>
+</select>
     <span id="roleBadge" class="role-badge">Только просмотр</span>
   </div>
 </header>
@@ -613,13 +614,15 @@
   const TOTAL_MODULES = 176;
 
   const ROLE_PASSWORDS = {
-    otk: "otk123"
-  };
+  otk: "otk123",   // обычный инспектор ОТК
+  chief: "1212"    // руководитель ОТК
+};
 
-  const ROLE_LABELS = {
-    viewer: "Только просмотр",
-    otk: "Режим ОТК (галочки доступны)"
-  };
+const ROLE_LABELS = {
+  viewer: "Только просмотр",
+  otk: "ОТК: можно только ставить галочки",
+  chief: "Рук. ОТК: можно ставить и снимать галочки"
+};
 
   const TASKS_STANDARD = [
     "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
@@ -714,7 +717,7 @@
   let currentRole = "viewer";
   let currentGroup = "Все";
   let currentFloorFilter = "all";
-  const authenticatedRoles = { otk: false };
+ const authenticatedRoles = { otk: false, chief: false };
 
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
@@ -765,11 +768,11 @@
   const badge = document.getElementById("roleBadge");
   badge.textContent = ROLE_LABELS[currentRole] || "";
 
-  // 🔹 блокируем/разблокируем кнопку сброса
+  // 🔹 кто может сбрасывать модуль
   const resetBtn = document.getElementById("resetModule");
   if (resetBtn) {
-    const isOtk = currentRole === "otk";
-    resetBtn.disabled = !isOtk;
+    const isChief = currentRole === "chief";
+    resetBtn.disabled = !isChief;
   }
 
   renderTasks();
@@ -1112,13 +1115,39 @@
       qaCheckbox.type = "checkbox";
       qaCheckbox.checked = moduleData.qaTasks[taskIndex];
       qaCheckbox.disabled = currentRole !== "otk";
-      qaCheckbox.addEventListener("change", () => {
-        if (currentRole !== "otk") return;
-        moduleData.qaTasks[taskIndex] = qaCheckbox.checked;
-        updateModuleStats();
-        updateSummaryTable();
-        saveToFirestore();
-      });
+     qaCheckbox.addEventListener("change", () => {
+  // никто не может менять в просмотре
+  if (currentRole === "viewer") {
+    qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+    return;
+  }
+
+  const prev = moduleData.qaTasks[taskIndex];   // было
+  const next = qaCheckbox.checked;              // стало
+
+  // Ставить галочку (false -> true) могут и ОТК, и Рук. ОТК
+  if (!prev && next) {
+    if (currentRole === "otk" || currentRole === "chief") {
+      moduleData.qaTasks[taskIndex] = true;
+    } else {
+      qaCheckbox.checked = prev;
+    }
+  }
+
+  // Снимать галочку (true -> false) может только Рук. ОТК
+  else if (prev && !next) {
+    if (currentRole === "chief") {
+      moduleData.qaTasks[taskIndex] = false;
+    } else {
+      alert("Снять галочку может только руководитель ОТК.");
+      qaCheckbox.checked = true; // вернули обратно
+    }
+  }
+
+  updateModuleStats();
+  updateSummaryTable();
+  saveToFirestore();
+});
       qaWrapper.appendChild(qaCheckbox);
       qaWrapper.appendChild(document.createTextNode("ОТК"));
 
@@ -1197,8 +1226,8 @@ function getColorForPercent(p) {
     });
 
    document.getElementById("resetModule").addEventListener("click", () => {
-  if (currentRole !== "otk") {
-    alert("Сбросить отметки может только ОТК.");
+  if (currentRole !== "chief") {
+    alert("Сбросить все отметки может только руководитель ОТК.");
     return;
   }
   if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
@@ -1219,6 +1248,7 @@ function getColorForPercent(p) {
 </script>
 </body>
 </html>
+
 
 
 
