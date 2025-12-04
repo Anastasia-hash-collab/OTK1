@@ -301,6 +301,10 @@
   button:hover {
     background: #2563EB;
   }
+ button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
   /* ---------------- TABLE ---------------- */
 
@@ -676,10 +680,18 @@
   }
 
   function updateRoleUI() {
-    const badge = document.getElementById("roleBadge");
-    badge.textContent = ROLE_LABELS[currentRole] || "";
-    renderTasks();
+  const badge = document.getElementById("roleBadge");
+  badge.textContent = ROLE_LABELS[currentRole] || "";
+
+  // 🔹 блокируем/разблокируем кнопку сброса
+  const resetBtn = document.getElementById("resetModule");
+  if (resetBtn) {
+    const isOtk = currentRole === "otk";
+    resetBtn.disabled = !isOtk;
   }
+
+  renderTasks();
+}
 
   function setRole(role) {
     currentRole = role;
@@ -1056,11 +1068,15 @@ function getColorForPercent(p) {
       updateSummaryTable();
     });
 
-    document.getElementById("resetModule").addEventListener("click", () => {
-      if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
-        resetCurrentModule();
-      }
-    });
+   document.getElementById("resetModule").addEventListener("click", () => {
+  if (currentRole !== "otk") {
+    alert("Сбросить отметки может только ОТК.");
+    return;
+  }
+  if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
+    resetCurrentModule();
+  }
+});
 
     document
       .getElementById("roleSelect")
@@ -1070,7 +1086,7 @@ function getColorForPercent(p) {
       .addEventListener("click", exportSummaryToCsv);
   });
 </script>
-
 </body>
 </html>
+
 
