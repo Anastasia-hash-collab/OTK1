@@ -1145,75 +1145,95 @@ const ROLE_LABELS = {
       labelDiv.className = "task-text";
       labelDiv.textContent = baseTasks[taskIndex];
 
-      const qaWrapper = document.createElement("label");
-      qaWrapper.className = "task-checkbox";
-      const qaCheckbox = document.createElement("input");
-      qaCheckbox.type = "checkbox";
+     indices.forEach((taskIndex) => {
+  const item = document.createElement("div");
+  item.className = "task-item";
+
+  const num = document.createElement("div");
+  num.className = "task-num";
+  num.textContent = taskIndex + 1;
+
+  const labelDiv = document.createElement("div");
+  labelDiv.className = "task-text";
+  labelDiv.textContent = baseTasks[taskIndex];
+
+  // ---------- ЧЕКБОКС ОТК ----------
+  const qaWrapper = document.createElement("label");
+  qaWrapper.className = "task-checkbox";
+
+  const qaCheckbox = document.createElement("input");
+  qaCheckbox.type = "checkbox";
+  qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+
+  // в режиме просмотра ничего нельзя менять
+  qaCheckbox.disabled = (currentRole === "viewer");
+
+  qaCheckbox.addEventListener("change", () => {
+    // защита на всякий случай
+    if (currentRole === "viewer") {
       qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-      qaCheckbox.disabled = currentRole !== "otk";
-     qaCheckbox.addEventListener("change", () => {
-  // никто не может менять в просмотре
-  if (currentRole === "viewer") {
-    qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-    return;
-  }
-
-  const prev = moduleData.qaTasks[taskIndex];   // было
-  const next = qaCheckbox.checked;              // стало
-
-  // Ставить галочку (false -> true) могут и ОТК, и Рук. ОТК
-  if (!prev && next) {
-    if (currentRole === "otk" || currentRole === "chief") {
-      moduleData.qaTasks[taskIndex] = true;
-    } else {
-      qaCheckbox.checked = prev;
+      return;
     }
-  }
 
-  // Снимать галочку (true -> false) может только Рук. ОТК
-  else if (prev && !next) {
-    if (currentRole === "chief") {
-      moduleData.qaTasks[taskIndex] = false;
-    } else {
-      alert("Снять галочку может только руководитель ОТК.");
-      qaCheckbox.checked = true; // вернули обратно
+    const prev = moduleData.qaTasks[taskIndex];   // было
+    const next = qaCheckbox.checked;              // стало
+
+    // Ставить галочку (false -> true) могут и ОТК, и Рук. ОТК
+    if (!prev && next) {
+      if (currentRole === "otk" || currentRole === "chief") {
+        moduleData.qaTasks[taskIndex] = true;
+      } else {
+        qaCheckbox.checked = prev;
+      }
     }
-  }
 
-  updateModuleStats();
-  updateSummaryTable();
-  saveToFirestore();
+    // Снимать галочку (true -> false) может только Рук. ОТК
+    else if (prev && !next) {
+      if (currentRole === "chief") {
+        moduleData.qaTasks[taskIndex] = false;
+      } else {
+        alert("Снять галочку может только руководитель ОТК.");
+        qaCheckbox.checked = true; // вернули обратно
+      }
+    }
+
+    updateModuleStats();
+    updateSummaryTable();
+    saveToFirestore();
+  });
+
+  qaWrapper.appendChild(qaCheckbox);
+  qaWrapper.appendChild(document.createTextNode("ОТК"));
+
+  // ---------- ПОЛЕ КОММЕНТАРИЯ ----------
+  const commentInput = document.createElement("input");
+  commentInput.type = "text";
+  commentInput.className = "task-comment-input";
+  commentInput.placeholder = "Комментарий";
+  commentInput.value = moduleData.comments[taskIndex] || "";
+  commentInput.disabled = (currentRole === "viewer");
+
+  commentInput.addEventListener("change", () => {
+    if (currentRole === "viewer") {
+      commentInput.value = moduleData.comments[taskIndex] || "";
+      return;
+    }
+    moduleData.comments[taskIndex] = commentInput.value;
+    saveToFirestore();
+  });
+
+  // ---------- ПРАВЫЙ СТОЛБЕЦ (галочка + комментарий) ----------
+  const rightCol = document.createElement("div");
+  rightCol.className = "task-right";
+  rightCol.appendChild(qaWrapper);
+  rightCol.appendChild(commentInput);
+
+  // ---------- СБОРКА СТРОКИ ----------
+  item.appendChild(num);
+  item.appendChild(labelDiv);
+  item.appendChild(rightCol);
+  container.appendChild(item);
 });
-      qaWrapper.appendChild(qaCheckbox);
-      qaWrapper.appendChild(document.createTextNode("ОТК"));
-     // 🔹 поле комментария
-const commentInput = document.createElement("input");
-commentInput.type = "text";
-commentInput.className = "task-comment-input";
-commentInput.placeholder = "Комментарий";
-commentInput.value = moduleData.comments[taskIndex] || "";
-commentInput.disabled = (currentRole === "viewer");
-
-commentInput.addEventListener("change", () => {
-  if (currentRole === "viewer") {
-    commentInput.value = moduleData.comments[taskIndex] || "";
-    return;
-  }
-  moduleData.comments[taskIndex] = commentInput.value;
-  saveToFirestore();
-});
-
-// 🔹 правый столбец (галочка + комментарий)
-const rightCol = document.createElement("div");
-rightCol.className = "task-right";
-rightCol.appendChild(qaWrapper);
-rightCol.appendChild(commentInput);
-
-      item.appendChild(num);
-      item.appendChild(labelDiv);
-      item.appendChild(qaWrapper);
-      container.appendChild(item);
-    });
 
     updateModuleStats();
   }
@@ -1306,6 +1326,7 @@ function getColorForPercent(p) {
 </script>
 </body>
 </html>
+
 
 
 
