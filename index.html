@@ -267,6 +267,22 @@
     border-radius: 6px;
     border: 1px solid #CBD5E1;
   }
+ .task-user-select {
+  width: 160px;
+  max-width: 50vw;
+  padding: 3px 6px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+}
+
+@media (max-width: 480px) {
+  .task-user-select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
 
   /* ---------------- STATUS / BUTTONS ---------------- */
 
@@ -650,6 +666,15 @@
     otk: "ОТК: можно только ставить галочки",
     chief: "Рук. ОТК: можно ставить и снимать галочки"
   };
+ const OTK_USERS = [
+  "Большая",
+  "Соловьева",
+  "Михалева",
+  "Таймазов",
+  "Козлечкова",
+  "Барсегян",
+  "Стручкова"
+];
 
   const TASKS_STANDARD = [
     "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
@@ -747,35 +772,45 @@
   const authenticatedRoles = { otk: false, chief: false };
 
   function ensureModuleArraysSize(moduleId) {
-    const tasks = getTasksForModule(moduleId);
-    const len = tasks.length;
+  const tasks = getTasksForModule(moduleId);
+  const len = tasks.length;
 
-    if (!modulesData[moduleId]) {
-      modulesData[moduleId] = {
-        qaTasks: Array(len).fill(false),
-        comments: Array(len).fill("")
-      };
-      return;
-    }
-
-    const m = modulesData[moduleId];
-
-    if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
-    if (!Array.isArray(m.comments)) m.comments = [];
-
-    const newQA = Array(len).fill(false);
-    const newComments = Array(len).fill("");
-
-    const copyLen = Math.min(len, m.qaTasks.length, m.comments.length || len);
-
-    for (let i = 0; i < copyLen; i++) {
-      newQA[i] = !!m.qaTasks[i];
-      newComments[i] = m.comments[i] || "";
-    }
-
-    m.qaTasks = newQA;
-    m.comments = newComments;
+  if (!modulesData[moduleId]) {
+    modulesData[moduleId] = {
+      qaTasks: Array(len).fill(false),
+      comments: Array(len).fill(""),
+      qaUsers: Array(len).fill("")
+    };
+    return;
   }
+
+  const m = modulesData[moduleId];
+
+  if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
+  if (!Array.isArray(m.comments)) m.comments = [];
+  if (!Array.isArray(m.qaUsers)) m.qaUsers = [];
+
+  const newQA = Array(len).fill(false);
+  const newComments = Array(len).fill("");
+  const newQaUsers = Array(len).fill("");
+
+  const copyLen = Math.min(
+    len,
+    m.qaTasks.length,
+    m.comments.length || len,
+    m.qaUsers.length || len
+  );
+
+  for (let i = 0; i < copyLen; i++) {
+    newQA[i] = !!m.qaTasks[i];
+    newComments[i] = m.comments[i] || "";
+    newQaUsers[i] = m.qaUsers[i] || "";
+  }
+
+  m.qaTasks = newQA;
+  m.comments = newComments;
+  m.qaUsers = newQaUsers;
+}
 
   function initModulesData() {
     for (let i = 1; i <= TOTAL_MODULES; i++) {
@@ -1011,15 +1046,16 @@
     updateProgressCircle("sectionProgressCircle", sectionQA);
   }
 
-  function resetCurrentModule() {
-    const tasks = getTasksForModule(currentModuleId);
-    const len = tasks.length;
-    modulesData[currentModuleId].qaTasks = Array(len).fill(false);
-    modulesData[currentModuleId].comments = Array(len).fill("");
-    renderTasks();
-    updateSummaryTable();
-    saveToFirestore();
-  }
+ function resetCurrentModule() {
+  const tasks = getTasksForModule(currentModuleId);
+  const len = tasks.length;
+  modulesData[currentModuleId].qaTasks = Array(len).fill(false);
+  modulesData[currentModuleId].comments = Array(len).fill("");
+  modulesData[currentModuleId].qaUsers = Array(len).fill("");
+  renderTasks();
+  updateSummaryTable();
+  saveToFirestore();
+}
 
   function exportSummaryToCsv() {
     let rows = [];
@@ -1158,23 +1194,69 @@
     qaCheckbox.type = "checkbox";
     qaCheckbox.checked = moduleData.qaTasks[taskIndex];
 
-    // в режиме просмотра ничего нельзя менять
     qaCheckbox.disabled = (currentRole === "viewer");
 
+    // ---------- SELECT с фамилией ОТК ----------
+    const userSelect = document.createElement("select");
+    userSelect.className = "task-user-select";
+
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "- фамилия ОТК -";
+    userSelect.appendChild(emptyOpt);
+
+    OTK_USERS.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      userSelect.appendChild(opt);
+    });
+
+    const currentUser =
+      (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+    userSelect.value = currentUser;
+    userSelect.disabled =
+      currentRole === "viewer" || !moduleData.qaTasks[taskIndex];
+
+    userSelect.addEventListener("change", () => {
+      if (currentRole === "viewer") {
+        userSelect.value =
+          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+        return;
+      }
+      if (!moduleData.qaTasks[taskIndex]) {
+        // нельзя менять фамилию, если галочка не стоит
+        userSelect.value =
+          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+        return;
+      }
+      moduleData.qaUsers[taskIndex] = userSelect.value || "";
+      saveToFirestore();
+    });
+
     qaCheckbox.addEventListener("change", () => {
-      // защита на всякий случай
       if (currentRole === "viewer") {
         qaCheckbox.checked = moduleData.qaTasks[taskIndex];
         return;
       }
 
-      const prev = moduleData.qaTasks[taskIndex];   // было
-      const next = qaCheckbox.checked;              // стало
+      const prev = moduleData.qaTasks[taskIndex];
+      const next = qaCheckbox.checked;
 
-      // Ставить галочку (false -> true) могут и ОТК, и Рук. ОТК
+      // Ставить галочку (false -> true) могут ОТК и Рук. ОТК
       if (!prev && next) {
         if (currentRole === "otk" || currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = true;
+
+          // включаем выбор фамилии
+          userSelect.disabled = false;
+
+          if (!moduleData.qaUsers) moduleData.qaUsers = [];
+          if (!moduleData.qaUsers[taskIndex]) {
+            const defaultUser = OTK_USERS[0] || "";
+            moduleData.qaUsers[taskIndex] = defaultUser;
+            userSelect.value = defaultUser || "";
+          }
         } else {
           qaCheckbox.checked = prev;
         }
@@ -1184,9 +1266,14 @@
       else if (prev && !next) {
         if (currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = false;
+          if (moduleData.qaUsers) {
+            moduleData.qaUsers[taskIndex] = "";
+          }
+          userSelect.value = "";
+          userSelect.disabled = true;
         } else {
           alert("Снять галочку может только руководитель ОТК.");
-          qaCheckbox.checked = true; // вернули обратно
+          qaCheckbox.checked = true;
         }
       }
 
@@ -1215,13 +1302,12 @@
       saveToFirestore();
     });
 
-    // ---------- ПРАВЫЙ СТОЛБЕЦ (галочка + комментарий) ----------
     const rightCol = document.createElement("div");
     rightCol.className = "task-right";
     rightCol.appendChild(qaWrapper);
+    rightCol.appendChild(userSelect);
     rightCol.appendChild(commentInput);
 
-    // ---------- СБОРКА СТРОКИ ----------
     item.appendChild(num);
     item.appendChild(labelDiv);
     item.appendChild(rightCol);
@@ -1318,4 +1404,5 @@
 </script>
 </body>
 </html>
+
 
