@@ -251,6 +251,23 @@
     height: 16px;
   }
 
+  .task-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 140px;
+  }
+
+  .task-comment-input {
+    width: 160px;
+    max-width: 50vw;
+    padding: 3px 6px;
+    font-size: 11px;
+    border-radius: 6px;
+    border: 1px solid #CBD5E1;
+  }
+
   /* ---------------- STATUS / BUTTONS ---------------- */
 
   .footer-status {
@@ -301,10 +318,11 @@
   button:hover {
     background: #2563EB;
   }
- button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   /* ---------------- TABLE ---------------- */
 
@@ -331,10 +349,16 @@
     font-weight: 600;
   }
 
+  .summary-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
   .summary-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 4px;
+    min-width: 360px;
   }
 
   .summary-table th {
@@ -351,15 +375,6 @@
     border-bottom: 1px solid #E2E8F0;
     font-size: 12px;
   }
- .summary-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.summary-table {
-  width: 100%;
-  min-width: 360px; /* чтобы на телефоне можно было скроллить, а не ломать таблицу */
-}
 
   .row-ready {
     background: #ECFDF5;
@@ -379,6 +394,16 @@
     font-weight: 500;
   }
 
+  .percent-colored {
+    font-weight: 600;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-align: center;
+    min-width: 55px;
+    display: inline-block;
+  }
+
   @media (max-width: 600px) {
     header {
       flex-direction: column;
@@ -389,110 +414,84 @@
       align-self: flex-end;
     }
   }
- @media (max-width: 480px) {
-  body {
-    font-size: 14px;
-  }
 
-  header {
-    padding: 10px 12px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
+  @media (max-width: 480px) {
+    body {
+      font-size: 14px;
+    }
 
-  header h1 {
-    font-size: 16px;
-  }
+    header {
+      padding: 10px 12px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
 
-  main {
-    padding: 10px;
-  }
+    header h1 {
+      font-size: 16px;
+    }
 
-  .card {
-    padding: 12px;
-    border-radius: 12px;
-  }
+    main {
+      padding: 10px;
+    }
 
-  .controls {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
+    .card {
+      padding: 12px;
+      border-radius: 12px;
+    }
 
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
+    .controls {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
 
-  .tasks {
-    max-height: 55vh;
-  }
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
 
-  .task-item {
-    align-items: flex-start;
-  }
+    .tasks {
+      max-height: 55vh;
+    }
 
-  .task-checkbox {
-    font-size: 13px;
-  }
+    .task-item {
+      align-items: flex-start;
+    }
 
-  .task-checkbox input {
-    width: 20px;
-    height: 20px;
-  }
+    .task-checkbox {
+      font-size: 13px;
+    }
 
-  .tabs {
-    overflow-x: auto;
-  }
+    .task-checkbox input {
+      width: 20px;
+      height: 20px;
+    }
 
-  .tab-button {
-    white-space: nowrap;
-    padding: 8px 10px;
-  }
+    .tabs {
+      overflow-x: auto;
+    }
 
-  .summary-header-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-}
-  .percent-colored {
-    font-weight: 600;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    text-align: center;
-    min-width: 55px;
-    display: inline-block;
-  }
- .task-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 140px;
-}
+    .tab-button {
+      white-space: nowrap;
+      padding: 8px 10px;
+    }
 
-.task-comment-input {
-  width: 160px;
-  max-width: 50vw;
-  padding: 3px 6px;
-  font-size: 11px;
-  border-radius: 6px;
-  border: 1px solid #CBD5E1;
-}
+    .summary-header-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
 
-@media (max-width: 480px) {
-  .task-right {
-    align-items: stretch;
+    .task-right {
+      align-items: stretch;
+    }
+    .task-comment-input {
+      width: 100%;
+      max-width: 100%;
+    }
   }
-  .task-comment-input {
-    width: 100%;
-    max-width: 100%;
-  }
-}
 </style>
 </head>
 
@@ -506,10 +505,10 @@
   <div class="role-bar">
     <span>Режим:</span>
     <select id="roleSelect" class="role-select">
-  <option value="viewer">Просмотр</option>
-  <option value="otk">ОТК</option>
-  <option value="chief">Рук. ОТК</option>
-</select>
+      <option value="viewer">Просмотр</option>
+      <option value="otk">ОТК</option>
+      <option value="chief">Рук. ОТК</option>
+    </select>
     <span id="roleBadge" class="role-badge">Только просмотр</span>
   </div>
 </header>
@@ -558,11 +557,11 @@
             <div class="progress-label">Текущий модуль</div>
           </div>
         </div>
-       <span id="statusBadge" class="badge badge-not-ready">Не начато</span>
-<div style="display:flex; gap:6px; flex-wrap:wrap;">
-  <button id="exportModuleCsv">Экспорт чек-листа</button>
-  <button id="resetModule">Сбросить все</button>
-</div>
+        <span id="statusBadge" class="badge badge-not-ready">Не начато</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button id="exportModuleCsv">Экспорт чек-листа</button>
+          <button id="resetModule">Сбросить все</button>
+        </div>
       </div>
     </section>
   </div>
@@ -601,19 +600,21 @@
       </div>
 
       <div class="summary-table-wrapper">
-  <table class="summary-table">
-    <thead>
-    <tr>
-      <th>Модуль</th>
-      <th>Этаж</th>
-      <th>%</th>
-      <th>Статус</th>
-    </tr>
-    </thead>
-    <tbody id="summaryTableBody"></tbody>
-  </table>
-</div>
-
+        <table class="summary-table">
+          <thead>
+          <tr>
+            <th>Модуль</th>
+            <th>Этаж</th>
+            <th>%</th>
+            <th>Статус</th>
+          </tr>
+          </thead>
+          <tbody id="summaryTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
 
 <!-- ---------------- FIREBASE ---------------- -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -621,14 +622,14 @@
 
 <script>
   const firebaseConfig = {
-  apiKey: "AIzaSyBwWguFZ48BuuYpIG8nEX1zHAIx3BOXFsI",
-  authDomain: "qc-modules.firebaseapp.com",
-  projectId: "qc-modules",
-  storageBucket: "qc-modules.firebasestorage.app",
-  messagingSenderId: "430400564818",
-  appId: "1:430400564818:web:2e46915026cedd4323798b",
-  measurementId: "G-LHCERM1GLW"
-};
+    apiKey: "AIzaSyBwWguFZ48BuuYpIG8nEX1zHAIx3BOXFsI",
+    authDomain: "qc-modules.firebaseapp.com",
+    projectId: "qc-modules",
+    storageBucket: "qc-modules.firebasestorage.app",
+    messagingSenderId: "430400564818",
+    appId: "1:430400564818:web:2e46915026cedd4323798b",
+    measurementId: "G-LHCERM1GLW"
+  };
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
@@ -640,15 +641,15 @@
   const TOTAL_MODULES = 176;
 
   const ROLE_PASSWORDS = {
-  otk: "otk123",   // обычный инспектор ОТК
-  chief: "1212"    // руководитель ОТК
-};
+    otk: "otk123",   // обычный инспектор ОТК
+    chief: "1212"    // руководитель ОТК
+  };
 
-const ROLE_LABELS = {
-  viewer: "Только просмотр",
-  otk: "ОТК: можно только ставить галочки",
-  chief: "Рук. ОТК: можно ставить и снимать галочки"
-};
+  const ROLE_LABELS = {
+    viewer: "Только просмотр",
+    otk: "ОТК: можно только ставить галочки",
+    chief: "Рук. ОТК: можно ставить и снимать галочки"
+  };
 
   const TASKS_STANDARD = [
     "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
@@ -743,38 +744,38 @@ const ROLE_LABELS = {
   let currentRole = "viewer";
   let currentGroup = "Все";
   let currentFloorFilter = "all";
- const authenticatedRoles = { otk: false, chief: false };
+  const authenticatedRoles = { otk: false, chief: false };
 
   function ensureModuleArraysSize(moduleId) {
-  const tasks = getTasksForModule(moduleId);
-  const len = tasks.length;
+    const tasks = getTasksForModule(moduleId);
+    const len = tasks.length;
 
-  if (!modulesData[moduleId]) {
-    modulesData[moduleId] = {
-      qaTasks: Array(len).fill(false),
-      comments: Array(len).fill("")
-    };
-    return;
+    if (!modulesData[moduleId]) {
+      modulesData[moduleId] = {
+        qaTasks: Array(len).fill(false),
+        comments: Array(len).fill("")
+      };
+      return;
+    }
+
+    const m = modulesData[moduleId];
+
+    if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
+    if (!Array.isArray(m.comments)) m.comments = [];
+
+    const newQA = Array(len).fill(false);
+    const newComments = Array(len).fill("");
+
+    const copyLen = Math.min(len, m.qaTasks.length, m.comments.length || len);
+
+    for (let i = 0; i < copyLen; i++) {
+      newQA[i] = !!m.qaTasks[i];
+      newComments[i] = m.comments[i] || "";
+    }
+
+    m.qaTasks = newQA;
+    m.comments = newComments;
   }
-
-  const m = modulesData[moduleId];
-
-  if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
-  if (!Array.isArray(m.comments)) m.comments = [];
-
-  const newQA = Array(len).fill(false);
-  const newComments = Array(len).fill("");
-
-  const copyLen = Math.min(len, m.qaTasks.length, m.comments.length || len);
-
-  for (let i = 0; i < copyLen; i++) {
-    newQA[i] = !!m.qaTasks[i];
-    newComments[i] = m.comments[i] || "";
-  }
-
-  m.qaTasks = newQA;
-  m.comments = newComments;
-}
 
   function initModulesData() {
     for (let i = 1; i <= TOTAL_MODULES; i++) {
@@ -801,18 +802,17 @@ const ROLE_LABELS = {
   }
 
   function updateRoleUI() {
-  const badge = document.getElementById("roleBadge");
-  badge.textContent = ROLE_LABELS[currentRole] || "";
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = ROLE_LABELS[currentRole] || "";
 
-  // 🔹 кто может сбрасывать модуль
-  const resetBtn = document.getElementById("resetModule");
-  if (resetBtn) {
-    const isChief = currentRole === "chief";
-    resetBtn.disabled = !isChief;
+    const resetBtn = document.getElementById("resetModule");
+    if (resetBtn) {
+      const isChief = currentRole === "chief";
+      resetBtn.disabled = !isChief;
+    }
+
+    renderTasks();
   }
-
-  renderTasks();
-}
 
   function setRole(role) {
     currentRole = role;
@@ -967,8 +967,10 @@ const ROLE_LABELS = {
 
       const tdModule = document.createElement("td");
       tdModule.textContent = id + (isLluModule(id) ? " (ЛЛУ)" : "");
+
       const tdFloor = document.createElement("td");
       tdFloor.textContent = floor;
+
       const tdQA = document.createElement("td");
       tdQA.className = "percent-cell";
 
@@ -978,6 +980,7 @@ const ROLE_LABELS = {
       colorSpan.style.backgroundColor = getColorForPercent(qaPercent);
 
       tdQA.appendChild(colorSpan);
+
       const tdStatus = document.createElement("td");
       tdStatus.textContent = statusByPercent(qaPercent);
 
@@ -1012,6 +1015,7 @@ const ROLE_LABELS = {
     const tasks = getTasksForModule(currentModuleId);
     const len = tasks.length;
     modulesData[currentModuleId].qaTasks = Array(len).fill(false);
+    modulesData[currentModuleId].comments = Array(len).fill("");
     renderTasks();
     updateSummaryTable();
     saveToFirestore();
@@ -1039,9 +1043,9 @@ const ROLE_LABELS = {
       .join("\r\n");
 
     const blob = new Blob(
-  ["\uFEFF" + csvContent],
-  { type: "text/csv;charset=utf-8;" }
-);
+      ["\uFEFF" + csvContent],
+      { type: "text/csv;charset=utf-8;" }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1051,49 +1055,50 @@ const ROLE_LABELS = {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
- function exportModuleChecklistToCsv() {
-  const moduleId = currentModuleId;
-  const floor = getFloor(moduleId);
-  ensureModuleArraysSize(moduleId);
 
-  const tasks = getTasksForModule(moduleId);
-  const moduleData = modulesData[moduleId];
+  function exportModuleChecklistToCsv() {
+    const moduleId = currentModuleId;
+    const floor = getFloor(moduleId);
+    ensureModuleArraysSize(moduleId);
 
-  let rows = [];
-  rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК"]);
+    const tasks = getTasksForModule(moduleId);
+    const moduleData = modulesData[moduleId];
 
-  tasks.forEach((taskText, index) => {
-    const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
-    rows.push([
-      moduleId,
-      String(floor),
-      String(index + 1),
-      taskText,
-      accepted
-    ]);
-  });
+    let rows = [];
+    rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК"]);
 
-  const csvContent = rows
-    .map(row =>
-      row
-        .map(field => `"${String(field).replace(/"/g, '""')}"`)
-        .join(";")
-    )
-    .join("\r\n");
+    tasks.forEach((taskText, index) => {
+      const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
+      rows.push([
+        moduleId,
+        String(floor),
+        String(index + 1),
+        taskText,
+        accepted
+      ]);
+    });
 
-  const blob = new Blob(
-  ["\uFEFF" + csvContent],
-  { type: "text/csv;charset=utf-8;" }
-);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `checklist_${moduleId}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+    const csvContent = rows
+      .map(row =>
+        row
+          .map(field => `"${String(field).replace(/"/g, '""')}"`)
+          .join(";")
+      )
+      .join("\r\n");
+
+    const blob = new Blob(
+      ["\uFEFF" + csvContent],
+      { type: "text/csv;charset=utf-8;" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `checklist_${moduleId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   async function loadFromFirestore() {
     try {
@@ -1145,95 +1150,75 @@ const ROLE_LABELS = {
       labelDiv.className = "task-text";
       labelDiv.textContent = baseTasks[taskIndex];
 
-     indices.forEach((taskIndex) => {
-  const item = document.createElement("div");
-  item.className = "task-item";
+      // ---------- ЧЕКБОКС ОТК ----------
+      const qaWrapper = document.createElement("label");
+      qaWrapper.className = "task-checkbox";
 
-  const num = document.createElement("div");
-  num.className = "task-num";
-  num.textContent = taskIndex + 1;
-
-  const labelDiv = document.createElement("div");
-  labelDiv.className = "task-text";
-  labelDiv.textContent = baseTasks[taskIndex];
-
-  // ---------- ЧЕКБОКС ОТК ----------
-  const qaWrapper = document.createElement("label");
-  qaWrapper.className = "task-checkbox";
-
-  const qaCheckbox = document.createElement("input");
-  qaCheckbox.type = "checkbox";
-  qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-
-  // в режиме просмотра ничего нельзя менять
-  qaCheckbox.disabled = (currentRole === "viewer");
-
-  qaCheckbox.addEventListener("change", () => {
-    // защита на всякий случай
-    if (currentRole === "viewer") {
+      const qaCheckbox = document.createElement("input");
+      qaCheckbox.type = "checkbox";
       qaCheckbox.checked = moduleData.qaTasks[taskIndex];
-      return;
-    }
 
-    const prev = moduleData.qaTasks[taskIndex];   // было
-    const next = qaCheckbox.checked;              // стало
+      qaCheckbox.disabled = (currentRole === "viewer");
 
-    // Ставить галочку (false -> true) могут и ОТК, и Рук. ОТК
-    if (!prev && next) {
-      if (currentRole === "otk" || currentRole === "chief") {
-        moduleData.qaTasks[taskIndex] = true;
-      } else {
-        qaCheckbox.checked = prev;
-      }
-    }
+      qaCheckbox.addEventListener("change", () => {
+        if (currentRole === "viewer") {
+          qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+          return;
+        }
 
-    // Снимать галочку (true -> false) может только Рук. ОТК
-    else if (prev && !next) {
-      if (currentRole === "chief") {
-        moduleData.qaTasks[taskIndex] = false;
-      } else {
-        alert("Снять галочку может только руководитель ОТК.");
-        qaCheckbox.checked = true; // вернули обратно
-      }
-    }
+        const prev = moduleData.qaTasks[taskIndex];
+        const next = qaCheckbox.checked;
 
-    updateModuleStats();
-    updateSummaryTable();
-    saveToFirestore();
-  });
+        if (!prev && next) {
+          if (currentRole === "otk" || currentRole === "chief") {
+            moduleData.qaTasks[taskIndex] = true;
+          } else {
+            qaCheckbox.checked = prev;
+          }
+        } else if (prev && !next) {
+          if (currentRole === "chief") {
+            moduleData.qaTasks[taskIndex] = false;
+          } else {
+            alert("Снять галочку может только руководитель ОТК.");
+            qaCheckbox.checked = true;
+          }
+        }
 
-  qaWrapper.appendChild(qaCheckbox);
-  qaWrapper.appendChild(document.createTextNode("ОТК"));
+        updateModuleStats();
+        updateSummaryTable();
+        saveToFirestore();
+      });
 
-  // ---------- ПОЛЕ КОММЕНТАРИЯ ----------
-  const commentInput = document.createElement("input");
-  commentInput.type = "text";
-  commentInput.className = "task-comment-input";
-  commentInput.placeholder = "Комментарий";
-  commentInput.value = moduleData.comments[taskIndex] || "";
-  commentInput.disabled = (currentRole === "viewer");
+      qaWrapper.appendChild(qaCheckbox);
+      qaWrapper.appendChild(document.createTextNode("ОТК"));
 
-  commentInput.addEventListener("change", () => {
-    if (currentRole === "viewer") {
+      // ---------- ПОЛЕ КОММЕНТАРИЯ ----------
+      const commentInput = document.createElement("input");
+      commentInput.type = "text";
+      commentInput.className = "task-comment-input";
+      commentInput.placeholder = "Комментарий";
       commentInput.value = moduleData.comments[taskIndex] || "";
-      return;
-    }
-    moduleData.comments[taskIndex] = commentInput.value;
-    saveToFirestore();
-  });
+      commentInput.disabled = (currentRole === "viewer");
 
-  // ---------- ПРАВЫЙ СТОЛБЕЦ (галочка + комментарий) ----------
-  const rightCol = document.createElement("div");
-  rightCol.className = "task-right";
-  rightCol.appendChild(qaWrapper);
-  rightCol.appendChild(commentInput);
+      commentInput.addEventListener("change", () => {
+        if (currentRole === "viewer") {
+          commentInput.value = moduleData.comments[taskIndex] || "";
+          return;
+        }
+        moduleData.comments[taskIndex] = commentInput.value;
+        saveToFirestore();
+      });
 
-  // ---------- СБОРКА СТРОКИ ----------
-  item.appendChild(num);
-  item.appendChild(labelDiv);
-  item.appendChild(rightCol);
-  container.appendChild(item);
-});
+      const rightCol = document.createElement("div");
+      rightCol.className = "task-right";
+      rightCol.appendChild(qaWrapper);
+      rightCol.appendChild(commentInput);
+
+      item.appendChild(num);
+      item.appendChild(labelDiv);
+      item.appendChild(rightCol);
+      container.appendChild(item);
+    });
 
     updateModuleStats();
   }
@@ -1254,29 +1239,28 @@ const ROLE_LABELS = {
       });
     });
   }
-function getColorForPercent(p) {
-  // p = 0 → красный, p = 50 → жёлтый, p = 100 → зелёный
-  
-  const r1 = 220, g1 = 38,  b1 = 38;   // красный
-  const r2 = 255, g2 = 165, b2 = 0;    // жёлтый/оранжевый
-  const r3 = 22,  g3 = 163, b3 = 74;   // зелёный
 
-  let r, g, b;
+  function getColorForPercent(p) {
+    const r1 = 220, g1 = 38,  b1 = 38;
+    const r2 = 255, g2 = 165, b2 = 0;
+    const r3 = 22,  g3 = 163, b3 = 74;
 
-  if (p < 50) {
-    const t = p / 50;
-    r = r1 + (r2 - r1) * t;
-    g = g1 + (g2 - g1) * t;
-    b = b1 + (b2 - b1) * t;
-  } else {
-    const t = (p - 50) / 50;
-    r = r2 + (r3 - r2) * t;
-    g = g2 + (g3 - g2) * t;
-    b = b2 + (b3 - b2) * t;
+    let r, g, b;
+
+    if (p < 50) {
+      const t = p / 50;
+      r = r1 + (r2 - r1) * t;
+      g = g1 + (g2 - g1) * t;
+      b = b1 + (b2 - b1) * t;
+    } else {
+      const t = (p - 50) / 50;
+      r = r2 + (r3 - r2) * t;
+      g = g2 + (g3 - g2) * t;
+      b = b2 + (b3 - b2) * t;
+    }
+
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
   }
-
-  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-}
 
   document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
@@ -1303,15 +1287,15 @@ function getColorForPercent(p) {
       updateSummaryTable();
     });
 
-   document.getElementById("resetModule").addEventListener("click", () => {
-  if (currentRole !== "chief") {
-    alert("Сбросить все отметки может только руководитель ОТК.");
-    return;
-  }
-  if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
-    resetCurrentModule();
-  }
-});
+    document.getElementById("resetModule").addEventListener("click", () => {
+      if (currentRole !== "chief") {
+        alert("Сбросить все отметки может только руководитель ОТК.");
+        return;
+      }
+      if (confirm("Сбросить все отметки по " + currentModuleId + "?")) {
+        resetCurrentModule();
+      }
+    });
 
     document
       .getElementById("roleSelect")
@@ -1319,20 +1303,10 @@ function getColorForPercent(p) {
     document
       .getElementById("exportCsv")
       .addEventListener("click", exportSummaryToCsv);
-   document
-  .getElementById("exportModuleCsv")
-  .addEventListener("click", exportModuleChecklistToCsv);
+    document
+      .getElementById("exportModuleCsv")
+      .addEventListener("click", exportModuleChecklistToCsv);
   });
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
