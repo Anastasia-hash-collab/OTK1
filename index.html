@@ -810,7 +810,9 @@ const ROLE_LABELS = {
     const isChief = currentRole === "chief";
     resetBtn.disabled = !isChief;
   }
-
+   
+renderTasks();
+}
   function renderTasks() {
   ensureModuleArraysSize(currentModuleId);
 
@@ -1064,6 +1066,7 @@ function getColorForPercent(p) {
 </script>
 </body>
 </html>
+
 
 
 
