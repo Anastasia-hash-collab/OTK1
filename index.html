@@ -811,313 +811,6 @@ const ROLE_LABELS = {
     resetBtn.disabled = !isChief;
   }
 
-  renderTasks();
-}
-
-  function setRole(role) {
-    currentRole = role;
-    document.getElementById("roleSelect").value = role;
-    updateRoleUI();
-  }
-
-  function handleRoleChange(e) {
-    const newRole = e.target.value;
-    if (newRole === "viewer") {
-      setRole("viewer");
-      return;
-    }
-
-    if (authenticatedRoles[newRole]) {
-      setRole(newRole);
-      return;
-    }
-
-    const pwd = prompt("Введите пароль для ОТК:");
-    if (pwd === ROLE_PASSWORDS[newRole]) {
-      authenticatedRoles[newRole] = true;
-      setRole(newRole);
-    } else {
-      alert("Неверный пароль");
-      e.target.value = currentRole;
-    }
-  }
-
-  function populateModuleSelect() {
-    const select = document.getElementById("moduleSelect");
-    select.innerHTML = "";
-    for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = "M" + i;
-      const option = document.createElement("option");
-      option.value = id;
-      option.textContent = id + (isLluModule(id) ? " (ЛЛУ)" : "");
-      select.appendChild(option);
-    }
-    select.value = currentModuleId;
-  }
-
-  function populateGroupSelect() {
-    const select = document.getElementById("groupSelect");
-    select.innerHTML = "";
-    GROUP_NAMES.forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
-    select.value = currentGroup;
-  }
-
-  function populateFloorFilter() {
-    const select = document.getElementById("floorFilterSelect");
-    if (!select) return;
-    select.innerHTML = "";
-
-    const optAll = document.createElement("option");
-    optAll.value = "all";
-    optAll.textContent = "Все этажи";
-    select.appendChild(optAll);
-
-    const maxFloor = getFloor("M" + TOTAL_MODULES);
-    for (let floor = 2; floor <= maxFloor; floor++) {
-      const opt = document.createElement("option");
-      opt.value = String(floor);
-      opt.textContent = floor + " этаж";
-      select.appendChild(opt);
-    }
-
-    select.value = currentFloorFilter;
-  }
-
-  function updateModuleTypeHint() {
-    const hint = document.getElementById("moduleTypeHint");
-    if (isLluModule(currentModuleId)) {
-      hint.textContent = "Модуль ЛЛУ";
-    } else {
-      hint.textContent = "Обычный модуль";
-    }
-  }
-
-  function updateModuleFloorInfo() {
-    const el = document.getElementById("moduleFloorInfo");
-    const floor = getFloor(currentModuleId);
-    el.textContent = "Этаж: " + floor;
-  }
-
-  function updateGroupUIForModule() {
-    const select = document.getElementById("groupSelect");
-    if (!select) return;
-    if (isLluModule(currentModuleId)) {
-      select.disabled = true;
-    } else {
-      select.disabled = false;
-    }
-  }
-
-  function statusByPercent(p) {
-    if (p === 0) return "Не начато (0%)";
-    if (p === 100) return "Готово к отгрузке (100%)";
-    return "В работе (1–99%)";
-  }
-
-  function badgeClassByPercent(baseClass, p) {
-    if (p === 0) return baseClass + " badge-not-ready";
-    if (p === 100) return baseClass + " badge-ready";
-    return baseClass + " badge-inprogress";
-  }
-
-  function updateModuleStats() {
-    ensureModuleArraysSize(currentModuleId);
-    const moduleData = modulesData[currentModuleId];
-    const qaPercent = calculatePercent(moduleData.qaTasks);
-
-    document.getElementById("percentQA").textContent =
-      "Принято ОТК: " + qaPercent + "%";
-
-    const badgeEl = document.getElementById("statusBadge");
-    badgeEl.textContent = statusByPercent(qaPercent);
-    badgeEl.className = badgeClassByPercent("badge", qaPercent);
-
-    updateProgressCircle("moduleProgressCircle", qaPercent);
-  }
-
-  function updateSummaryTable() {
-    const tbody = document.getElementById("summaryTableBody");
-    tbody.innerHTML = "";
-
-    let readyCountAll = 0;
-    let sumQAAll = 0;
-
-    for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = "M" + i;
-      ensureModuleArraysSize(id);
-      const data = modulesData[id];
-      const qaPercent = calculatePercent(data.qaTasks);
-      const ready = qaPercent === 100;
-      const floor = getFloor(id);
-
-      sumQAAll += qaPercent;
-      if (ready) readyCountAll++;
-
-      if (currentFloorFilter !== "all" && floor !== Number(currentFloorFilter)) {
-        continue;
-      }
-
-      const tr = document.createElement("tr");
-      if (ready) tr.classList.add("row-ready");
-
-      const tdModule = document.createElement("td");
-      tdModule.textContent = id + (isLluModule(id) ? " (ЛЛУ)" : "");
-      const tdFloor = document.createElement("td");
-      tdFloor.textContent = floor;
-      const tdQA = document.createElement("td");
-      tdQA.className = "percent-cell";
-
-      const colorSpan = document.createElement("span");
-      colorSpan.className = "percent-colored";
-      colorSpan.textContent = qaPercent + "%";
-      colorSpan.style.backgroundColor = getColorForPercent(qaPercent);
-
-      tdQA.appendChild(colorSpan);
-      const tdStatus = document.createElement("td");
-      tdStatus.textContent = statusByPercent(qaPercent);
-
-      tr.appendChild(tdModule);
-      tr.appendChild(tdFloor);
-      tr.appendChild(tdQA);
-      tr.appendChild(tdStatus);
-      tbody.appendChild(tr);
-    }
-
-    const sectionQA = Math.round(sumQAAll / TOTAL_MODULES);
-
-    document.getElementById("sectionPercentQA").textContent =
-      "Принято ОТК: " + sectionQA + "%";
-
-    const sectionStatusBadge = document.getElementById("sectionStatusBadge");
-    let sectionText;
-    if (sectionQA === 0) sectionText = "Секция не начата";
-    else if (sectionQA === 100) sectionText = "Секция готова к отгрузке";
-    else sectionText = "Секция в работе";
-
-    sectionStatusBadge.textContent = sectionText;
-    sectionStatusBadge.className = badgeClassByPercent("badge", sectionQA);
-
-    document.getElementById("summaryReadyCount").textContent =
-      "Готово: " + readyCountAll;
-
-    updateProgressCircle("sectionProgressCircle", sectionQA);
-  }
-
-  function resetCurrentModule() {
-    const tasks = getTasksForModule(currentModuleId);
-    const len = tasks.length;
-    modulesData[currentModuleId].qaTasks = Array(len).fill(false);
-    renderTasks();
-    updateSummaryTable();
-    saveToFirestore();
-  }
-
-  function exportSummaryToCsv() {
-    let rows = [];
-    rows.push(["Модуль", "Этаж", "% ОТК", "Статус"]);
-
-    for (let i = 1; i <= TOTAL_MODULES; i++) {
-      const id = "M" + i;
-      ensureModuleArraysSize(id);
-      const data = modulesData[id];
-      const qaPercent = calculatePercent(data.qaTasks);
-      const floor = getFloor(id);
-      const status = statusByPercent(qaPercent);
-
-      rows.push([id, String(floor), String(qaPercent) + "%", status]);
-    }
-
-    const csvContent = rows
-      .map((row) =>
-        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(";")
-      )
-      .join("\r\n");
-
-    const blob = new Blob(
-  ["\uFEFF" + csvContent],
-  { type: "text/csv;charset=utf-8;" }
-);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "svodka_cheryomushki.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
- function exportModuleChecklistToCsv() {
-  const moduleId = currentModuleId;
-  const floor = getFloor(moduleId);
-  ensureModuleArraysSize(moduleId);
-
-  const tasks = getTasksForModule(moduleId);
-  const moduleData = modulesData[moduleId];
-
-  let rows = [];
-  rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК"]);
-
-  tasks.forEach((taskText, index) => {
-    const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
-    rows.push([
-      moduleId,
-      String(floor),
-      String(index + 1),
-      taskText,
-      accepted
-    ]);
-  });
-
-  const csvContent = rows
-    .map(row =>
-      row
-        .map(field => `"${String(field).replace(/"/g, '""')}"`)
-        .join(";")
-    )
-    .join("\r\n");
-
-  const blob = new Blob(
-  ["\uFEFF" + csvContent],
-  { type: "text/csv;charset=utf-8;" }
-);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `checklist_${moduleId}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-  async function loadFromFirestore() {
-    try {
-      const snap = await docRef.get();
-      if (snap.exists) {
-        const data = snap.data();
-        if (data && data.modulesData && typeof data.modulesData === "object") {
-          modulesData = data.modulesData;
-        }
-      }
-    } catch (e) {
-      console.warn("Не удалось загрузить из Firestore:", e);
-    }
-    initModulesData();
-  }
-
-  async function saveToFirestore() {
-    try {
-      await docRef.set({ modulesData }, { merge: true });
-    } catch (e) {
-      console.warn("Не удалось сохранить в Firestore:", e);
-    }
-  }
-
   function renderTasks() {
   ensureModuleArraysSize(currentModuleId);
 
@@ -1156,8 +849,47 @@ const ROLE_LABELS = {
     // в режиме просмотра ничего нельзя менять
     qaCheckbox.disabled = (currentRole === "viewer");
 
+    // ---------- SELECT с фамилией ----------
+    const userSelect = document.createElement("select");
+    userSelect.className = "task-user-select";
+
+    // пустой вариант
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "- фамилия ОТК -";
+    userSelect.appendChild(emptyOpt);
+
+    OTK_USERS.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      userSelect.appendChild(opt);
+    });
+
+    const currentUser =
+      (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+    userSelect.value = currentUser;
+    userSelect.disabled =
+      currentRole === "viewer" || !moduleData.qaTasks[taskIndex];
+
+    userSelect.addEventListener("change", () => {
+      if (currentRole === "viewer") {
+        userSelect.value =
+          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+        return;
+      }
+      if (!moduleData.qaTasks[taskIndex]) {
+        // нельзя выбирать фамилию, если галочка не стоит
+        userSelect.value =
+          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
+        return;
+      }
+      moduleData.qaUsers[taskIndex] = userSelect.value || "";
+      saveToFirestore();
+    });
+
     qaCheckbox.addEventListener("change", () => {
-      // защита на всякий случай
+      // защита: в просмотре ничего не меняем
       if (currentRole === "viewer") {
         qaCheckbox.checked = moduleData.qaTasks[taskIndex];
         return;
@@ -1170,6 +902,17 @@ const ROLE_LABELS = {
       if (!prev && next) {
         if (currentRole === "otk" || currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = true;
+
+          // включаем выбор фамилии
+          userSelect.disabled = false;
+
+          // если фамилия ещё не указана — подставим первую из списка
+          if (!moduleData.qaUsers) moduleData.qaUsers = [];
+          if (!moduleData.qaUsers[taskIndex]) {
+            const defaultUser = OTK_USERS[0] || "";
+            moduleData.qaUsers[taskIndex] = defaultUser;
+            userSelect.value = defaultUser || "";
+          }
         } else {
           qaCheckbox.checked = prev;
         }
@@ -1179,6 +922,12 @@ const ROLE_LABELS = {
       else if (prev && !next) {
         if (currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = false;
+          // очищаем фамилию и блокируем селект
+          if (moduleData.qaUsers) {
+            moduleData.qaUsers[taskIndex] = "";
+          }
+          userSelect.value = "";
+          userSelect.disabled = true;
         } else {
           alert("Снять галочку может только руководитель ОТК.");
           qaCheckbox.checked = true; // вернули обратно
@@ -1210,10 +959,11 @@ const ROLE_LABELS = {
       saveToFirestore();
     });
 
-    // ---------- ПРАВЫЙ СТОЛБЕЦ (галочка + комментарий) ----------
+    // ---------- ПРАВЫЙ СТОЛБЕЦ ----------
     const rightCol = document.createElement("div");
     rightCol.className = "task-right";
     rightCol.appendChild(qaWrapper);
+    rightCol.appendChild(userSelect);
     rightCol.appendChild(commentInput);
 
     // ---------- СБОРКА СТРОКИ ----------
@@ -1314,6 +1064,7 @@ function getColorForPercent(p) {
 </script>
 </body>
 </html>
+
 
 
 
