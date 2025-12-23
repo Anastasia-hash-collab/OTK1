@@ -1101,18 +1101,23 @@
     const moduleData = modulesData[moduleId];
 
     let rows = [];
-    rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК"]);
+    rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий","Фамилия ОТК"]);
 
     tasks.forEach((taskText, index) => {
-      const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
-      rows.push([
-        moduleId,
-        String(floor),
-        String(index + 1),
-        taskText,
-        accepted
-      ]);
-    });
+  const accepted = moduleData.qaTasks[index] ? "Да" : "Нет";
+  const comment = moduleData.comments?.[index] || "";
+  const qaUser = moduleData.qaUsers?.[index] || "";
+
+  rows.push([
+    moduleId,
+    String(floor),
+    String(index + 1),
+    taskText,
+    accepted,
+    comment,
+    qaUser
+  ]);
+});
 
     const csvContent = rows
       .map(row =>
@@ -1404,5 +1409,6 @@
 </script>
 </body>
 </html>
+
 
 
