@@ -649,324 +649,735 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const docRef = db.collection("qc_modules").doc("section1");
+ const docRef = db.collection("qc_modules").doc("section1_mod6");
 </script>
 
 <!-- ---------------- APP LOGIC ---------------- -->
 <script>
-const TOTAL_MODULES = 132;
-const MODULES_PER_FLOOR = 6;
+  const TOTAL_MODULES = 132;        // 22 этажа (2–23) * 6 модулей
+  const MODULES_PER_FLOOR = 6;
 
-// Пароли ролей
-const ROLE_PASSWORDS = {
-  otk: "otk123",
-  chief: "1212"
-};
+  const ROLE_PASSWORDS = {
+    otk: "otk123",
+    chief: "1212"
+  };
 
-// Тексты бейджей ролей
-const ROLE_LABELS = {
-  viewer: "Только просмотр",
-  otk: "ОТК: можно ставить галочки",
-  chief: "Рук. ОТК: можно ставить и снимать"
-};
+  const ROLE_LABELS = {
+    viewer: "Только просмотр",
+    otk: "ОТК: можно только ставить галочки",
+    chief: "Рук. ОТК: можно ставить и снимать галочки"
+  };
 
-// Фамилии сотрудников ОТК
-const OTK_USERS = [
-  "Большая",
-  "Соловьева",
-  "Михалева",
-  "Таймазов",
-  "Козлечкова",
-  "Барсегян",
-  "Стручкова"
-];
+  const OTK_USERS = [
+    "Большая",
+    "Соловьева",
+    "Михалева",
+    "Таймазов",
+    "Козлечкова",
+    "Барсегян",
+    "Стручкова"
+  ];
 
-// Списки задач
-const TASKS_STANDARD = [
-  "Смонтированные перегородки ГКЛ + звукоизоляция.",
-  "Сантехнический модуль, шов залит по контуру.",
-  "Отделка санузла завершена, фаянс и смесители установлены.",
-  "Потолок: металлокаркас + цементно-перлитовые плиты на анкерах.",
-  "Коробки, подрозетники, кабель, расключение.",
-  "Квартирные электрические щитки смонтированы.",
-  "Гильзы ЭОМ (МОП) установлены.",
-  "Квартирная разводка вентиляции выполнена.",
-  "Дымоудаление и дымоприёмники смонтированы.",
-  "Система пожаротушения + главный стояк.",
-  "Водоснабжение и канализация (+ К1 стояк).",
-  "Стояк К2.",
-  "Отопление, стояки.",
-  "Радиаторы установлены.",
-  "Зачеканка тех. отверстий (вент, К1).",
-  "Каркас зашивки инженерных систем МОП.",
-  "Противопожарные отсечки МОП.",
-  "Окна/двери (алюминий, ПВХ), швы герметизированы.",
-  "Подоконники и откосы окрашены.",
-  "Плитка: фартук, кухня, коридор, балкон + затирка.",
-  "Мокрый штукатурный фасад балкона.",
-  "Кронштейны подсистемы НВФ.",
-  "Утеплитель по фасаду.",
-  "Противопожарная отсечка СПК."
-];
+  // ---------- ЗАДАЧИ ----------
+  const TASKS_STANDARD = [
+    "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
+    "Смонтированный сантехнический модуль с залитым технологическим швом по контуру.",
+    "Завершённая внутренняя отделка сантехнического модуля с установленным санфаянсом и смесителями.",
+    "Потолок из металлического профиля, зашитый цементно-перлитовыми плитами с проклейкой стыков лентой Герлен. Крепление потолка на анкерах.",
+    "Установка распределительных коробок, подрозетников и прокладка кабеля с расключением.",
+    "Монтаж квартирных электрических щитков.",
+    "Установка гильз-пакетов ЭОМ в местах общего пользования (МОП).",
+    "Выполненная внутренняя квартирная разводка вентиляции.",
+    "Монтаж дымоудаления и дымоприёмников.",
+    "Монтаж системы пожаротушения и главного стояка.",
+    "Монтаж системы водоснабжения и канализации (+ стояк К1).",
+    "Монтаж стояка К2.",
+    "Монтаж стояков отопления.",
+    "Установка радиаторов.",
+    "Зачеканка технических отверстий инженерных коммуникаций (вентиляция, К1).",
+    "Монтаж металлического каркаса зашивки инженерных коммуникаций МОП.",
+    "Устройство противопожарных отсечек инженерных коммуникаций МОП.",
+    "Установка оконных и дверных блоков из алюминия и ПВХ с монтажом стеклопакетов, фурнитуры и герметизацией швов.",
+    "Монтаж подоконников, устройство и покраска откосов.",
+    "Укладка плитки фартука, кухни, коридора и балкона с последующей затиркой.",
+    "Устройство мокрого штукатурного фасада балкона.",
+    "Монтаж кронштейнов подсистемы НВФ.",
+    "Монтаж утеплителя по фасаду модуля.",
+    "Монтаж противопожарной отсечки СПК."
+  ];
 
-const TASKS_ADJ_LLU = [
-  "Потолок: плиты на анкерах (ЛЛУ).",
-  "Коробки, кабель, расключение (ЛЛУ).",
-  "Гильзы ЭОМ (МОП) (ЛЛУ).",
-  "Стояки отопления (ЛЛУ).",
-  "Радиаторы (ЛЛУ).",
-  "Каркас зашивки инженерных систем МОП (ЛЛУ).",
-  "Противопожарные отсечки МОП (ЛЛУ).",
-  "Окна/двери, герметизация (ЛЛУ).",
-  "Подоконники и откосы (ЛЛУ).",
-  "Плитка балкона + затирка (ЛЛУ).",
-  "Мокрый фасад балкона (ЛЛУ).",
-  "Кронштейны подсистемы НВФ (ЛЛУ).",
-  "Утеплитель по фасаду (ЛЛУ).",
-  "Противопожарная отсечка СПК (ЛЛУ)."
-];
+  const TASKS_ADJ_LLU = [
+    "Потолок из металлического профиля, зашитый цементно-перлитовыми плитами с проклейкой стыков лентой Герлен. Крепление потолка на анкерах.",
+    "Установка распределительных коробок, подрозетников и прокладка кабеля с расключением.",
+    "Установка гильз-пакетов ЭОМ в местах общего пользования (МОП).",
+    "Монтаж стояков отопления.",
+    "Установка радиаторов.",
+    "Монтаж металлического каркаса зашивки инженерных коммуникаций МОП.",
+    "Устройство противопожарных отсечек инженерных коммуникаций МОП.",
+    "Установка оконных и дверных блоков из алюминия и ПВХ с монтажом стеклопакетов, фурнитуры и герметизацией швов.",
+    "Монтаж подоконников, устройство и покраска откосов.",
+    "Укладка плитки балкона с последующей затиркой.",
+    "Устройство мокрого штукатурного фасада балкона.",
+    "Монтаж кронштейнов подсистемы НВФ.",
+    "Монтаж утеплителя по фасаду модуля.",
+    "Монтаж противопожарной отсечки СПК."
+  ];
 
-const TASKS_FLOOR4_LLU = [
-  "Каркас зашивки инженерных систем МОП (4).",
-  "Стояки отопления (4).",
-  "Радиаторы (4).",
-  "Системы ДВ, ДП (4).",
-  "Двери ЛЛУ (4).",
-  "Окна, стеклопакеты, зачеканка швов (4).",
-  "Плитка ЛЛУ (4).",
-  "Кронштейны подсистемы НВФ (4).",
-  "Утеплитель по фасаду (4).",
-  "Противопожарная отсечка СПК (4)."
-];
+  const TASKS_LLU = [
+    "Монтаж металлического каркаса зашивки инженерных коммуникаций МОП.",
+    "Монтаж стояков отопления.",
+    "Установка радиаторов.",
+    "Монтаж систем ДВ, ДП.",
+    "Монтаж дверей ЛЛУ.",
+    "Установка оконных блоков с монтажом стеклопакетов и зачеканкой швов.",
+    "Укладка плитки ЛЛУ.",
+    "Монтаж кронштейнов подсистемы НВФ.",
+    "Монтаж утеплителя по фасаду модуля.",
+    "Монтаж противопожарной отсечки СПК."
+  ];
 
-// Определение этажа
-function getFloor(moduleId) {
-  const num = parseInt(moduleId.replace("M",""), 10);
-  return 1 + Math.floor((num - 1) / MODULES_PER_FLOOR);
-}
+  // ---------- ГРУППЫ (фильтр) ----------
+  // Оставляем прежние названия групп для типовых.
+  const GROUP_NAMES = ["Все", "СТК", "ВИС", "ЭОМ", "Потолки", "Фасад", "Отделка"];
 
-// Тип модуля по позиции на этаже
-function getModuleType(moduleId) {
-  const num = parseInt(moduleId.replace("M",""),10);
-  const pos = ((num - 1) % MODULES_PER_FLOOR) + 1;
-  if (pos === 3) return "adj_llu";
-  if (pos === 4) return "floor4_llu";
-  return "standard";
-}
+  // Индексы задач (1-based) только для типового списка (TASKS_STANDARD)
+  const GROUP_INDICES = {
+    "СТК":      [2, 3],
+    "ВИС":      [8, 9, 10, 11, 12, 13, 14, 15],
+    "ЭОМ":      [5, 6, 7],
+    "Потолки":  [4],
+    "Фасад":    [22, 23, 24], // кронштейны/утеплитель/отсечка — в конце
+    "Отделка":  [1, 16, 17, 18, 19, 20, 21]
+  };
 
-// Получить задачи по типу
-function getTasksForModule(moduleId) {
-  const type = getModuleType(moduleId);
-  if (type === "adj_llu") return TASKS_ADJ_LLU;
-  if (type === "floor4_llu") return TASKS_FLOOR4_LLU;
-  return TASKS_STANDARD;
-}
-
-// Расчёт % принятия ОТК
-function percentDone(arr) {
-  const done = arr.filter(Boolean).length;
-  return Math.round(done / arr.length * 100);
-}
-
-// Отрисовка задач
-function renderTasks() {
-  const container = document.getElementById("tasksContainer");
-  container.innerHTML = "";
-
-  const data = modulesData[currentModuleId] || { qaTasks: [], comments: [], qaUsers: [] };
-  const tasks = getTasksForModule(currentModuleId);
-  ensureModuleArraysSize(currentModuleId);
-
-  tasks.forEach((taskText, i) => {
-    const row = document.createElement("div");
-    row.className = "task-item";
-
-    const left = document.createElement("div");
-    left.className = "task-text";
-    left.textContent = taskText;
-
-    const check = document.createElement("input");
-    check.type = "checkbox";
-    check.checked = data.qaTasks[i];
-    check.disabled = currentRole === "viewer" || (currentRole === "otk" && !authenticatedRoles.otk);
-
-    const selectUser = document.createElement("select");
-    selectUser.className = "task-user-select";
-    const opt0 = document.createElement("option");
-    opt0.value = "";
-    opt0.textContent = "- фамилия ОТК -";
-    selectUser.appendChild(opt0);
-    OTK_USERS.forEach(u => {
-      const o = document.createElement("option");
-      o.value = u;
-      o.textContent = u;
-      selectUser.appendChild(o);
-    });
-    selectUser.value = data.qaUsers[i] || "";
-    selectUser.disabled = currentRole === "viewer" || !data.qaTasks[i];
-
-    // Обработка установки/снятия галочек
-    check.addEventListener("change", () => {
-      const prev = data.qaTasks[i];
-      const next = check.checked;
-
-      if (!prev && next) {
-        if (currentRole === "otk" || currentRole === "chief") {
-          data.qaTasks[i] = true;
-          data.qaUsers[i] = OTK_USERS[0] || "";
-          selectUser.value = data.qaUsers[i];
-        } else {
-          check.checked = false;
-        }
-      }
-
-      if (prev && !next) {
-        if (currentRole === "chief") {
-          data.qaTasks[i] = false;
-          data.qaUsers[i] = "";
-          selectUser.value = "";
-        } else {
-          alert("Снять галочку может только руководитель ОТК.");
-          check.checked = true;
-        }
-      }
-
-      updateModuleStats();
-      updateSummaryTable();
-      saveToFirestore();
-    });
-
-    // Комментарии
-    const inputComment = document.createElement("input");
-    inputComment.type = "text";
-    inputComment.className = "task-comment-input";
-    inputComment.placeholder = "Комментарий";
-    inputComment.value = data.comments[i] || "";
-    inputComment.disabled = currentRole === "viewer";
-
-    inputComment.addEventListener("change", () => {
-      if (currentRole !== "viewer") {
-        data.comments[i] = inputComment.value;
-        saveToFirestore();
-      }
-    });
-
-    // Выбор фамилии
-    selectUser.addEventListener("change", () => {
-      if (currentRole !== "viewer" && data.qaTasks[i]) {
-        data.qaUsers[i] = selectUser.value;
-        selectUser.disabled = true; // запрет снятия после выбора
-        saveToFirestore();
-      } else {
-        selectUser.value = "";
-      }
-    });
-
-    const right = document.createElement("div");
-    right.className = "task-right";
-    right.appendChild(check);
-    right.appendChild(selectUser);
-    right.appendChild(inputComment);
-
-    row.appendChild(left);
-    row.appendChild(right);
-    container.appendChild(row);
-  });
-}
-
-// Сводная таблица
-function updateSummaryTable() {
-  const tbody = document.getElementById("summaryTableBody");
-  tbody.innerHTML = "";
-
-  let readyCount = 0;
-  let sumQA = 0;
-
-  for (let i = 1; i <= TOTAL_MODULES; i++) {
-    const id = "M" + i;
-    const m = modulesData[id];
-    const p = percentDone(m.qaTasks);
-    sumQA += p;
-    if (p === 100) readyCount++;
-    const floor = getFloor(id);
-
-    const tr = document.createElement("tr");
-    if (p === 100) tr.classList.add("row-ready");
-
-    tr.innerHTML = `
-      <td>${id}</td>
-      <td>${floor}</td>
-      <td class="percent-cell"><span class="percent-colored">${p}%</span></td>
-      <td>${statusByPercent(p)}</td>
-    `;
-
-    tbody.appendChild(tr);
+  // ---------- ТИП МОДУЛЯ ПО ПОЗИЦИИ НА ЭТАЖЕ ----------
+  function getModuleNumber(moduleId) {
+    return parseInt(moduleId.replace("M", ""), 10) || 1;
   }
 
-  const sectionPercent = Math.round(sumQA / TOTAL_MODULES);
-  document.getElementById("sectionPercentQA").textContent = "Принято ОТК: " + sectionPercent + "%";
-  document.getElementById("summaryReadyCount").textContent = "Готово: " + readyCount;
-  updateProgressCircle("sectionProgressCircle", sectionPercent);
-}
+  // 2 этаж начинается с М1
+  function getFloor(moduleId) {
+    const num = getModuleNumber(moduleId);
+    return 2 + Math.floor((num - 1) / MODULES_PER_FLOOR);
+  }
 
-// Обновление статуса
-function statusByPercent(p) {
-  if (p === 0) return "Не начато";
-  if (p === 100) return "Готово";
-  return "В работе";
-}
+  function getPositionOnFloor(moduleId) {
+    const num = getModuleNumber(moduleId);
+    return ((num - 1) % MODULES_PER_FLOOR) + 1; // 1..6
+  }
 
-// Обновление UI прогресса
-function updateModuleStats() {
-  const m = modulesData[currentModuleId];
-  const p = percentDone(m.qaTasks);
-  document.getElementById("percentQA").textContent = "Принято ОТК: " + p + "%";
+  function getModuleType(moduleId) {
+    const pos = getPositionOnFloor(moduleId);
+    if (pos === 3) return "adj_llu";  // смежный с ЛЛУ
+    if (pos === 4) return "llu";      // ЛЛУ
+    return "standard";                // типовые 1,2,5,6
+  }
 
-  const badge = document.getElementById("statusBadge");
-  badge.textContent = statusByPercent(p);
-  badge.className = badgeClassByPercent("badge", p);
-  updateProgressCircle("moduleProgressCircle", p);
-}
+  function getTasksForModule(moduleId) {
+    const type = getModuleType(moduleId);
+    if (type === "adj_llu") return TASKS_ADJ_LLU;
+    if (type === "llu") return TASKS_LLU;
+    return TASKS_STANDARD;
+  }
 
-// Переключение роли
-document.getElementById("roleSelect").addEventListener("change", (e) => {
-  const role = e.target.value;
-  if (role !== "viewer" && !authenticatedRoles[role]) {
-    const pwd = prompt("Пароль:");
-    if (pwd === ROLE_PASSWORDS[role]) authenticatedRoles[role] = true;
-    else {
-      alert("Неверный пароль");
-      e.target.value = currentRole;
+  function isLluModule(moduleId) {
+    return getModuleType(moduleId) !== "standard";
+  }
+
+  function getVisibleTaskIndices(moduleId) {
+    const type = getModuleType(moduleId);
+
+    // Для смежного и ЛЛУ показываем ВСЕ задачи (без группировки)
+    if (type !== "standard") {
+      const len = getTasksForModule(moduleId).length;
+      return Array.from({ length: len }, (_, i) => i);
+    }
+
+    // Типовой модуль: группировка работает
+    if (currentGroup === "Все") {
+      return Array.from({ length: TASKS_STANDARD.length }, (_, i) => i);
+    }
+
+    const nums = GROUP_INDICES[currentGroup] || [];
+    return nums.map(n => n - 1).filter(i => i >= 0 && i < TASKS_STANDARD.length);
+  }
+
+  // ---------- ДАННЫЕ ----------
+  let modulesData = {};
+  let currentModuleId = "M1";
+  let currentRole = "viewer";
+  let currentGroup = "Все";
+  let currentFloorFilter = "all";
+  const authenticatedRoles = { otk: false, chief: false };
+
+  function ensureModuleArraysSize(moduleId) {
+    const tasks = getTasksForModule(moduleId);
+    const len = tasks.length;
+
+    if (!modulesData[moduleId]) {
+      modulesData[moduleId] = {
+        qaTasks: Array(len).fill(false),
+        comments: Array(len).fill(""),
+        qaUsers: Array(len).fill("")
+      };
       return;
     }
+
+    const m = modulesData[moduleId];
+    if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
+    if (!Array.isArray(m.comments)) m.comments = [];
+    if (!Array.isArray(m.qaUsers)) m.qaUsers = [];
+
+    const newQA = Array(len).fill(false);
+    const newComments = Array(len).fill("");
+    const newQaUsers = Array(len).fill("");
+
+    const copyLen = Math.min(len, m.qaTasks.length, m.comments.length || len, m.qaUsers.length || len);
+
+    for (let i = 0; i < copyLen; i++) {
+      newQA[i] = !!m.qaTasks[i];
+      newComments[i] = m.comments[i] || "";
+      newQaUsers[i] = m.qaUsers[i] || "";
+    }
+
+    m.qaTasks = newQA;
+    m.comments = newComments;
+    m.qaUsers = newQaUsers;
   }
-  currentRole = role;
-  updateRoleUI();
-});
 
-// UI бейджа роли
-function updateRoleUI() {
-  document.getElementById("roleBadge").textContent = ROLE_LABELS[currentRole];
-  renderTasks();
-}
+  function initModulesData() {
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      ensureModuleArraysSize("M" + i);
+    }
+  }
 
-// Сброс модуля
-document.getElementById("resetModule").addEventListener("click", () => {
-  if (currentRole !== "chief") return alert("Сброс доступен только руководителю ОТК.");
-  const t = getTasksForModule(currentModuleId).length;
-  modulesData[currentModuleId] = { qaTasks: Array(t).fill(false), comments: Array(t).fill(""), qaUsers: Array(t).fill("") };
-  renderTasks();
-  updateSummaryTable();
-  saveToFirestore();
-});
+  function calculatePercent(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) return 0;
+    const done = arr.filter(Boolean).length;
+    return Math.round((done / arr.length) * 100);
+  }
 
-// Инициализация
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadFromFirestore();
-  renderTasks();
-  updateSummaryTable();
-});
+  function updateProgressCircle(circleId, percent) {
+    const circle = document.getElementById(circleId);
+    if (!circle) return;
+    const radius = circle.r.baseVal.value;
+    const circumference = 2 * Math.PI * radius;
+    circle.style.strokeDasharray = `${circumference} ${circumference}`;
+    circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+  }
+
+  function statusByPercent(p) {
+    if (p === 0) return "Не начато (0%)";
+    if (p === 100) return "Готово к отгрузке (100%)";
+    return "В работе (1–99%)";
+  }
+
+  function badgeClassByPercent(baseClass, p) {
+    if (p === 0) return baseClass + " badge-not-ready";
+    if (p === 100) return baseClass + " badge-ready";
+    return baseClass + " badge-inprogress";
+  }
+
+  function updateModuleTypeHint() {
+    const hint = document.getElementById("moduleTypeHint");
+    const type = getModuleType(currentModuleId);
+    if (type === "standard") hint.textContent = "Типовой модуль";
+    else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ (3-й)";
+    else hint.textContent = "Модуль ЛЛУ (4-й)";
+  }
+
+  function updateModuleFloorInfo() {
+    document.getElementById("moduleFloorInfo").textContent = "Этаж: " + getFloor(currentModuleId);
+  }
+
+  function updateGroupUIForModule() {
+    const select = document.getElementById("groupSelect");
+    if (!select) return;
+    // Группы доступны только на типовых
+    select.disabled = (getModuleType(currentModuleId) !== "standard");
+  }
+
+  function updateModuleStats() {
+    ensureModuleArraysSize(currentModuleId);
+    const moduleData = modulesData[currentModuleId];
+    const qaPercent = calculatePercent(moduleData.qaTasks);
+
+    document.getElementById("percentQA").textContent = "Принято ОТК: " + qaPercent + "%";
+
+    const badgeEl = document.getElementById("statusBadge");
+    badgeEl.textContent = statusByPercent(qaPercent);
+    badgeEl.className = badgeClassByPercent("badge", qaPercent);
+
+    updateProgressCircle("moduleProgressCircle", qaPercent);
+  }
+
+  function updateRoleUI() {
+    document.getElementById("roleBadge").textContent = ROLE_LABELS[currentRole] || "";
+    const resetBtn = document.getElementById("resetModule");
+    if (resetBtn) resetBtn.disabled = (currentRole !== "chief");
+    renderTasks();
+  }
+
+  function setRole(role) {
+    currentRole = role;
+    document.getElementById("roleSelect").value = role;
+    updateRoleUI();
+  }
+
+  function handleRoleChange(e) {
+    const newRole = e.target.value;
+    if (newRole === "viewer") return setRole("viewer");
+
+    if (authenticatedRoles[newRole]) return setRole(newRole);
+
+    const pwd = prompt("Введите пароль для ОТК:");
+    if (pwd === ROLE_PASSWORDS[newRole]) {
+      authenticatedRoles[newRole] = true;
+      setRole(newRole);
+    } else {
+      alert("Неверный пароль");
+      e.target.value = currentRole;
+    }
+  }
+
+  function populateModuleSelect() {
+    const select = document.getElementById("moduleSelect");
+    select.innerHTML = "";
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = "M" + i;
+      const type = getModuleType(id);
+      const label =
+        type === "standard" ? "" :
+        (type === "adj_llu" ? " (3-й, смежн.)" : " (4-й, ЛЛУ)");
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id + label;
+      select.appendChild(opt);
+    }
+    select.value = currentModuleId;
+  }
+
+  function populateGroupSelect() {
+    const select = document.getElementById("groupSelect");
+    select.innerHTML = "";
+    GROUP_NAMES.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    select.value = currentGroup;
+  }
+
+  function populateFloorFilter() {
+    const select = document.getElementById("floorFilterSelect");
+    if (!select) return;
+    select.innerHTML = "";
+
+    const optAll = document.createElement("option");
+    optAll.value = "all";
+    optAll.textContent = "Все этажи";
+    select.appendChild(optAll);
+
+    const maxFloor = getFloor("M" + TOTAL_MODULES); // будет 23
+    for (let floor = 2; floor <= maxFloor; floor++) {
+      const opt = document.createElement("option");
+      opt.value = String(floor);
+      opt.textContent = floor + " этаж";
+      select.appendChild(opt);
+    }
+
+    select.value = currentFloorFilter;
+  }
+
+  function getColorForPercent(p) {
+    const r1 = 220, g1 = 38,  b1 = 38;
+    const r2 = 255, g2 = 165, b2 = 0;
+    const r3 = 22,  g3 = 163, b3 = 74;
+
+    let r, g, b;
+    if (p < 50) {
+      const t = p / 50;
+      r = r1 + (r2 - r1) * t;
+      g = g1 + (g2 - g1) * t;
+      b = b1 + (b2 - b1) * t;
+    } else {
+      const t = (p - 50) / 50;
+      r = r2 + (r3 - r2) * t;
+      g = g2 + (g3 - g2) * t;
+      b = b2 + (b3 - b2) * t;
+    }
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  }
+
+  function renderTasks() {
+    ensureModuleArraysSize(currentModuleId);
+
+    const container = document.getElementById("tasksContainer");
+    container.innerHTML = "";
+
+    updateModuleTypeHint();
+    updateModuleFloorInfo();
+    updateGroupUIForModule();
+
+    const moduleData = modulesData[currentModuleId];
+    const tasks = getTasksForModule(currentModuleId);
+    const indices = getVisibleTaskIndices(currentModuleId);
+
+    indices.forEach((taskIndex) => {
+      const item = document.createElement("div");
+      item.className = "task-item";
+
+      const num = document.createElement("div");
+      num.className = "task-num";
+      num.textContent = taskIndex + 1;
+
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "task-text";
+      labelDiv.textContent = tasks[taskIndex];
+
+      const qaWrapper = document.createElement("label");
+      qaWrapper.className = "task-checkbox";
+
+      const qaCheckbox = document.createElement("input");
+      qaCheckbox.type = "checkbox";
+      qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+      qaCheckbox.disabled = (currentRole === "viewer");
+
+      const userSelect = document.createElement("select");
+      userSelect.className = "task-user-select";
+
+      const emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      emptyOpt.textContent = "- фамилия ОТК -";
+      userSelect.appendChild(emptyOpt);
+
+      OTK_USERS.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        userSelect.appendChild(opt);
+      });
+
+      const savedUser = moduleData.qaUsers[taskIndex] || "";
+      userSelect.value = savedUser;
+      userSelect.disabled = (currentRole === "viewer") || !moduleData.qaTasks[taskIndex];
+
+      userSelect.addEventListener("change", () => {
+        if (currentRole === "viewer") {
+          userSelect.value = moduleData.qaUsers[taskIndex] || "";
+          return;
+        }
+        if (!moduleData.qaTasks[taskIndex]) {
+          userSelect.value = moduleData.qaUsers[taskIndex] || "";
+          return;
+        }
+        // если фамилия уже была — менять может только chief
+        const currentUser = moduleData.qaUsers[taskIndex] || "";
+        if (currentUser && userSelect.value !== currentUser && currentRole !== "chief") {
+          alert("Изменить/удалить фамилию может только руководитель ОТК.");
+          userSelect.value = currentUser;
+          return;
+        }
+        moduleData.qaUsers[taskIndex] = userSelect.value || "";
+        saveToFirestore();
+      });
+
+      const commentInput = document.createElement("input");
+      commentInput.type = "text";
+      commentInput.className = "task-comment-input";
+      commentInput.placeholder = "Комментарий";
+      commentInput.value = moduleData.comments[taskIndex] || "";
+      commentInput.disabled = (currentRole === "viewer");
+
+      commentInput.addEventListener("change", () => {
+        if (currentRole === "viewer") {
+          commentInput.value = moduleData.comments[taskIndex] || "";
+          return;
+        }
+        moduleData.comments[taskIndex] = commentInput.value;
+        saveToFirestore();
+      });
+
+      qaCheckbox.addEventListener("change", () => {
+        if (currentRole === "viewer") {
+          qaCheckbox.checked = moduleData.qaTasks[taskIndex];
+          return;
+        }
+
+        const prev = moduleData.qaTasks[taskIndex];
+        const next = qaCheckbox.checked;
+        const saved = moduleData.qaUsers[taskIndex] || "";
+
+        if (saved && prev && !next && currentRole !== "chief") {
+          alert("Снять галочку может только руководитель ОТК, если назначена фамилия.");
+          qaCheckbox.checked = true;
+          return;
+        }
+
+        if (!prev && next) {
+          if (currentRole === "otk" || currentRole === "chief") {
+            moduleData.qaTasks[taskIndex] = true;
+            userSelect.disabled = false;
+            if (!moduleData.qaUsers[taskIndex]) {
+              const def = OTK_USERS[0] || "";
+              moduleData.qaUsers[taskIndex] = def;
+              userSelect.value = def;
+            }
+          } else {
+            qaCheckbox.checked = prev;
+          }
+        } else if (prev && !next) {
+          if (currentRole === "chief") {
+            moduleData.qaTasks[taskIndex] = false;
+            moduleData.qaUsers[taskIndex] = "";
+            userSelect.value = "";
+            userSelect.disabled = true;
+          } else {
+            alert("Снять галочку может только руководитель ОТК.");
+            qaCheckbox.checked = true;
+          }
+        }
+
+        updateModuleStats();
+        updateSummaryTable();
+        saveToFirestore();
+      });
+
+      qaWrapper.appendChild(qaCheckbox);
+      qaWrapper.appendChild(document.createTextNode("ОТК"));
+
+      const rightCol = document.createElement("div");
+      rightCol.className = "task-right";
+      rightCol.appendChild(qaWrapper);
+      rightCol.appendChild(userSelect);
+      rightCol.appendChild(commentInput);
+
+      item.appendChild(num);
+      item.appendChild(labelDiv);
+      item.appendChild(rightCol);
+      container.appendChild(item);
+    });
+
+    updateModuleStats();
+  }
+
+  function updateSummaryTable() {
+    const tbody = document.getElementById("summaryTableBody");
+    tbody.innerHTML = "";
+
+    let readyCountAll = 0;
+    let sumQAAll = 0;
+
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = "M" + i;
+      ensureModuleArraysSize(id);
+
+      const data = modulesData[id];
+      const qaPercent = calculatePercent(data.qaTasks);
+      const floor = getFloor(id);
+      const ready = (qaPercent === 100);
+
+      sumQAAll += qaPercent;
+      if (ready) readyCountAll++;
+
+      if (currentFloorFilter !== "all" && floor !== Number(currentFloorFilter)) continue;
+
+      const tr = document.createElement("tr");
+      if (ready) tr.classList.add("row-ready");
+
+      const tdModule = document.createElement("td");
+      tdModule.textContent = id;
+
+      const tdFloor = document.createElement("td");
+      tdFloor.textContent = floor;
+
+      const tdQA = document.createElement("td");
+      tdQA.className = "percent-cell";
+      const colorSpan = document.createElement("span");
+      colorSpan.className = "percent-colored";
+      colorSpan.textContent = qaPercent + "%";
+      colorSpan.style.backgroundColor = getColorForPercent(qaPercent);
+      tdQA.appendChild(colorSpan);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.textContent = statusByPercent(qaPercent);
+
+      tr.appendChild(tdModule);
+      tr.appendChild(tdFloor);
+      tr.appendChild(tdQA);
+      tr.appendChild(tdStatus);
+      tbody.appendChild(tr);
+    }
+
+    const sectionQA = Math.round(sumQAAll / TOTAL_MODULES);
+    document.getElementById("sectionPercentQA").textContent = "Принято ОТК: " + sectionQA + "%";
+
+    const sectionStatusBadge = document.getElementById("sectionStatusBadge");
+    sectionStatusBadge.textContent =
+      sectionQA === 0 ? "Секция не начата" :
+      sectionQA === 100 ? "Секция готова к отгрузке" :
+      "Секция в работе";
+    sectionStatusBadge.className = badgeClassByPercent("badge", sectionQA);
+
+    document.getElementById("summaryReadyCount").textContent = "Готово: " + readyCountAll;
+    updateProgressCircle("sectionProgressCircle", sectionQA);
+  }
+
+  function exportSummaryToCsv() {
+    let rows = [];
+    rows.push(["Модуль", "Этаж", "% ОТК", "Статус"]);
+
+    for (let i = 1; i <= TOTAL_MODULES; i++) {
+      const id = "M" + i;
+      ensureModuleArraysSize(id);
+      const data = modulesData[id];
+      const qaPercent = calculatePercent(data.qaTasks);
+      const floor = getFloor(id);
+      rows.push([id, String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
+    }
+
+    const csvContent = rows
+      .map((row) => row.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(";"))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "svodka_section_mod6.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportModuleChecklistToCsv() {
+    const moduleId = currentModuleId;
+    const floor = getFloor(moduleId);
+    ensureModuleArraysSize(moduleId);
+
+    const tasks = getTasksForModule(moduleId);
+    const moduleData = modulesData[moduleId];
+
+    let rows = [];
+    rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий", "Фамилия ОТК"]);
+
+    tasks.forEach((taskText, index) => {
+      rows.push([
+        moduleId,
+        String(floor),
+        String(index + 1),
+        taskText,
+        moduleData.qaTasks[index] ? "Да" : "Нет",
+        moduleData.comments?.[index] || "",
+        moduleData.qaUsers?.[index] || ""
+      ]);
+    });
+
+    const csvContent = rows
+      .map((row) => row.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(";"))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `checklist_${moduleId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function resetCurrentModule() {
+    if (currentRole !== "chief") {
+      alert("Сбросить все отметки может только руководитель ОТК.");
+      return;
+    }
+    const tasks = getTasksForModule(currentModuleId);
+    const len = tasks.length;
+    modulesData[currentModuleId].qaTasks = Array(len).fill(false);
+    modulesData[currentModuleId].comments = Array(len).fill("");
+    modulesData[currentModuleId].qaUsers = Array(len).fill("");
+    renderTasks();
+    updateSummaryTable();
+    saveToFirestore();
+  }
+
+  async function loadFromFirestore() {
+    try {
+      const snap = await docRef.get();
+      if (snap.exists) {
+        const data = snap.data();
+        if (data && data.modulesData && typeof data.modulesData === "object") {
+          modulesData = data.modulesData;
+        }
+      }
+    } catch (e) {
+      console.warn("Не удалось загрузить из Firestore:", e);
+    }
+    initModulesData();
+  }
+
+  async function saveToFirestore() {
+    try {
+      await docRef.set({ modulesData }, { merge: true });
+    } catch (e) {
+      console.warn("Не удалось сохранить в Firestore:", e);
+    }
+  }
+
+  function initTabs() {
+    const buttons = document.querySelectorAll(".tab-button");
+    const contents = document.querySelectorAll(".tab-content");
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-tab");
+        buttons.forEach((b) => b.classList.remove("active"));
+        contents.forEach((c) => c.classList.remove("tab-active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + tab).classList.add("tab-active");
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    initTabs();
+    await loadFromFirestore();
+
+    populateModuleSelect();
+    populateGroupSelect();
+    populateFloorFilter();
+
+    renderTasks();
+    updateSummaryTable();
+    updateRoleUI();
+
+    document.getElementById("moduleSelect").addEventListener("change", (e) => {
+      currentModuleId = e.target.value;
+      renderTasks();
+    });
+
+    document.getElementById("groupSelect").addEventListener("change", (e) => {
+      currentGroup = e.target.value;
+      renderTasks();
+    });
+
+    document.getElementById("floorFilterSelect").addEventListener("change", (e) => {
+      currentFloorFilter = e.target.value;
+      updateSummaryTable();
+    });
+
+    document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
+
+    document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
+    document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
+    document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
+  });
 </script>
 </body>
 </html>
+
 
