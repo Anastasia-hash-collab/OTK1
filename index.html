@@ -1064,24 +1064,13 @@
       userSelect.disabled = (currentRole === "viewer") || !moduleData.qaTasks[taskIndex];
 
       userSelect.addEventListener("change", () => {
-        if (currentRole === "viewer") {
-          userSelect.value = moduleData.qaUsers[taskIndex] || "";
-          return;
-        }
-        if (!moduleData.qaTasks[taskIndex]) {
-          userSelect.value = moduleData.qaUsers[taskIndex] || "";
-          return;
-        }
-        // если фамилия уже была — менять может только chief
-        const currentUser = moduleData.qaUsers[taskIndex] || "";
-        if (currentUser && userSelect.value !== currentUser && currentRole !== "chief") {
-          alert("Изменить/удалить фамилию может только руководитель ОТК.");
-          userSelect.value = currentUser;
-          return;
-        }
-        moduleData.qaUsers[taskIndex] = userSelect.value || "";
-        saveToFirestore();
-      });
+  if (currentRole === "viewer") {
+    userSelect.value = moduleData.qaUsers[taskIndex] || "";
+    return;
+  }
+  moduleData.qaUsers[taskIndex] = userSelect.value || "";
+  saveToFirestore();
+});
 
       const commentInput = document.createElement("input");
       commentInput.type = "text";
@@ -1379,5 +1368,6 @@
 </script>
 </body>
 </html>
+
 
 
