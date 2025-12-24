@@ -1164,7 +1164,7 @@
     }
   }
 
-  function renderTasks() {
+function renderTasks() {
   ensureModuleArraysSize(currentModuleId);
 
   const container = document.getElementById("tasksContainer");
@@ -1201,44 +1201,8 @@
 
     qaCheckbox.disabled = (currentRole === "viewer");
 
-    // ---------- SELECT с фамилией ОТК ----------
-    const userSelect = document.createElement("select");
-    userSelect.className = "task-user-select";
-
-    const emptyOpt = document.createElement("option");
-    emptyOpt.value = "";
-    emptyOpt.textContent = "- фамилия ОТК -";
-    userSelect.appendChild(emptyOpt);
-
-    OTK_USERS.forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      userSelect.appendChild(opt);
-    });
-
-    const currentUser =
-      (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
-    userSelect.value = currentUser;
-    userSelect.disabled =
-      currentRole === "viewer" || !moduleData.qaTasks[taskIndex];
-
-    userSelect.addEventListener("change", () => {
-      if (currentRole === "viewer") {
-        userSelect.value =
-          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
-        return;
-      }
-      if (!moduleData.qaTasks[taskIndex]) {
-        // нельзя менять фамилию, если галочка не стоит
-        userSelect.value =
-          (moduleData.qaUsers && moduleData.qaUsers[taskIndex]) || "";
-        return;
-      }
-      moduleData.qaUsers[taskIndex] = userSelect.value || "";
-      saveToFirestore();
-    });
-
+    // 🔹 дополнительная защита: если фамилия уже выбрана — снять галочку может только chief
+    const savedUser = moduleData.qaUsers[taskIndex] || "";
     qaCheckbox.addEventListener("change", () => {
       if (currentRole === "viewer") {
         qaCheckbox.checked = moduleData.qaTasks[taskIndex];
@@ -1248,32 +1212,22 @@
       const prev = moduleData.qaTasks[taskIndex];
       const next = qaCheckbox.checked;
 
-      // Ставить галочку (false -> true) могут ОТК и Рук. ОТК
+      if (savedUser && prev && !next && currentRole !== "chief") {
+        alert("Снять галочку может только руководитель ОТК, если назначена фамилия.");
+        qaCheckbox.checked = true;
+        return;
+      }
+
       if (!prev && next) {
         if (currentRole === "otk" || currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = true;
-
-          // включаем выбор фамилии
-          userSelect.disabled = false;
-
-          if (!moduleData.qaUsers) moduleData.qaUsers = [];
-          if (!moduleData.qaUsers[taskIndex]) {
-            const defaultUser = OTK_USERS[0] || "";
-            moduleData.qaUsers[taskIndex] = defaultUser;
-            userSelect.value = defaultUser || "";
-          }
         } else {
           qaCheckbox.checked = prev;
         }
-      }
-
-      // Снимать галочку (true -> false) может только Рук. ОТК
-      else if (prev && !next) {
+      } else if (prev && !next) {
         if (currentRole === "chief") {
           moduleData.qaTasks[taskIndex] = false;
-          if (moduleData.qaUsers) {
-            moduleData.qaUsers[taskIndex] = "";
-          }
+          moduleData.qaUsers[taskIndex] = "";
           userSelect.value = "";
           userSelect.disabled = true;
         } else {
@@ -1290,23 +1244,45 @@
     qaWrapper.appendChild(qaCheckbox);
     qaWrapper.appendChild(document.createTextNode("ОТК"));
 
-    // ---------- ПОЛЕ КОММЕНТАРИЯ ----------
-    const commentInput = document.createElement("input");
-    commentInput.type = "text";
-    commentInput.className = "task-comment-input";
-    commentInput.placeholder = "Комментарий";
-    commentInput.value = moduleData.comments[taskIndex] || "";
-    commentInput.disabled = (currentRole === "viewer");
+    // ---------- SELECT с фамилией ОТК ----------
+    const userSelect = document.createElement("select");
+    userSelect.className = "task-user-select";
 
-    commentInput.addEventListener("change", () => {
-      if (currentRole === "viewer") {
-        commentInput.value = moduleData.comments[taskIndex] || "";
-        return;
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "- фамилия ОТК -";
+    userSelect.appendChild(emptyOpt);
+
+    OTK_USERS.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      userSelect.appendChild(opt);
+    });
+
+    userSelect.value = savedUser;
+    userSelect.disabled = currentRole === "viewer" || !moduleData.qaTasks[taskIndex];
+
+    // 🔹 патч: если фамилия уже выбрана, менять/очищать может только chief
+    userSelect.addEventListener("change", () => {
+      const currentUser = moduleData.qaUsers[taskIndex] || "";
+
+      if (currentUser && userSelect.value !== currentUser) {
+        if (currentRole !== "chief") {
+          alert("Изменить или удалить фамилию может только руководитель ОТК.");
+          userSelect.value = currentUser;
+          return;
+        }
       }
-      moduleData.comments[taskIndex] = commentInput.value;
+
+      if (!currentUser && userSelect.value) {
+        moduleData.qaUsers[taskIndex] = userSelect.value;
+      }
+
       saveToFirestore();
     });
 
+    // ---------- Сборка строки ----------
     const rightCol = document.createElement("div");
     rightCol.className = "task-right";
     rightCol.appendChild(qaWrapper);
@@ -1409,6 +1385,7 @@
 </script>
 </body>
 </html>
+
 
 
 
