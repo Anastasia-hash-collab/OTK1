@@ -263,7 +263,8 @@
 
     if (snap.exists) {
       const data = snap.data() || {};
-console.log("[SUMMARY] top keys:", Object.keys(data));
+console.log("[SUMMARY] top keys:", JSON.stringify(Object.keys(data)));
+console.log("[SUMMARY] has modules field:", !!data.modules, "type:", typeof data.modules);
 
 // пытаемся найти карту модулей под разными ключами
 const candidates = ["modules", "Modules", "summary", "data", "items", "map"];
@@ -992,5 +993,6 @@ console.log("[SUMMARY] sample M1:", summariesData["M1"]);
 
 </body>
 </html>
+
 
 
