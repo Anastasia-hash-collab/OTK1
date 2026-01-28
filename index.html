@@ -255,15 +255,31 @@
   }
 
   async function loadSummaryFromFirestore() {
-    // разовая загрузка, если вдруг listener ещё не стартанул
+  try {
+    console.log("[SUMMARY] trying to read:", summaryRef.path);
+
     const snap = await summaryRef.get();
+    console.log("[SUMMARY] exists =", snap.exists);
+
     if (snap.exists) {
       const data = snap.data() || {};
-      summariesData = (data.modules && typeof data.modules === "object") ? data.modules : {};
+      console.log("[SUMMARY] top keys:", Object.keys(data));
+
+      const modulesMap = (data.modules && typeof data.modules === "object") ? data.modules : {};
+      summariesData = modulesMap;
+
+      console.log("[SUMMARY] modules count:", Object.keys(summariesData).length);
+      console.log("[SUMMARY] sample keys:", Object.keys(summariesData).slice(0, 10));
+      console.log("[SUMMARY] sample M1:", summariesData["M1"]);
     } else {
       summariesData = {};
+      console.log("[SUMMARY] document not found => summariesData cleared");
     }
+  } catch (e) {
+    console.warn("[SUMMARY] read error:", e);
+    summariesData = {};
   }
+}
 </script>
 
 <script>
@@ -963,3 +979,4 @@
 
 </body>
 </html>
+
