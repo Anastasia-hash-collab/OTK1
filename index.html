@@ -74,10 +74,8 @@
   .summary-table th { background: #EFF6FF; font-size: 11px; padding: 6px 8px; text-transform: uppercase; border-bottom: 2px solid #BFDBFE; color: #1e3a8a; }
   .summary-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; font-size: 12px; }
   .row-ready { background: #ECFDF5; }
-
   .percent-cell { font-variant-numeric: tabular-nums; }
   #floorFilterSelect { padding: 4px 8px; border-radius: 8px; border: 1px solid #CBD5E1; background: white; color: #1E3A8A; font-size: 11px; font-weight: 500; }
-
   .percent-colored { font-weight: 600; color: white; padding: 4px 8px; border-radius: 6px; text-align: center; min-width: 55px; display: inline-block; }
 
   @media (max-width: 600px) {
@@ -92,16 +90,10 @@
 <header>
   <div>
     <h1>Контроль качества ИОР в модуле. (Выключите VPN)</h1>
-    <small id="headerSubtitle">Черёмушки · Корпус 1 · секция 2 · ОТК</small>
+    <small>Черёмушки · Корпус 1 · секция 3 · ОТК</small>
   </div>
 
   <div class="role-bar">
-    <span>Секция:</span>
-    <select id="sectionSelect" class="role-select">
-      <option value="s2">№2</option>
-      <option value="s3">№3</option>
-    </select>
-
     <span>Режим:</span>
     <select id="roleSelect" class="role-select">
       <option value="viewer">Просмотр</option>
@@ -232,54 +224,30 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-</script>
 
-<script>
-  // ---------------- SECTIONS CONFIG ----------------
-  // Секция 2: как было (6 мод/этаж), ЛЛУ pos 4, смежный pos 3
-  // Секция 3: 8 мод/этаж; ЛЛУ пока отключено (все standard), потому что позиций ты не указала.
-  const SECTIONS = {
-  s2: {
-    subtitle: "Черёмушки · Корпус 1 · секция 2 · ОТК",
-    firestoreDocId: "c1_s2",
-    floorStart: 2,
-    floorEnd: 23,
-    modulesPerFloor: 6,
-    adjLluPos: 3,
-    lluPos: 4
-  },
-  s3: {
-    subtitle: "Черёмушки · Корпус 1 · секция 3 · ОТК",
-    firestoreDocId: "c1_s3",
-    floorStart: 2,
-    floorEnd: 23,
-    modulesPerFloor: 8,
-    adjLluPos: 4,   // ← смежный к ЛЛУ
-    lluPos: 5       // ← ЛЛУ
-  }
-};
+  // ОДНА СЕКЦИЯ: корпус 1, секция 3
+  const SECTION_DOC_ID = "c1_s3";
 
-  let currentSectionKey = "s2";
+  const FLOOR_START = 2;
+  const FLOOR_END = 23;
+  const MODULES_PER_FLOOR = 8;
+  const TOTAL_MODULES = (FLOOR_END - FLOOR_START + 1) * MODULES_PER_FLOOR; // 176
 
-  function getSectionConfig() {
-    return SECTIONS[currentSectionKey];
-  }
+  // позиция на этаже: 4 смежный, 5 ЛЛУ
+  const ADJ_LLU_POS = 4;
+  const LLU_POS = 5;
 
-  function sectionRef() {
-    const cfg = getSectionConfig();
-    return db.collection("qc_modules").doc(cfg.firestoreDocId);
-  }
-
+  const sectionRef = db.collection("qc_modules").doc(SECTION_DOC_ID);
   function moduleRef(moduleId) {
-    return sectionRef().collection("modules").doc(moduleId);
+    return sectionRef.collection("modules").doc(moduleId);
   }
+
+  // Один документ со сводной по всем модулям секции (1 чтение для сводной)
+  const summaryRef = sectionRef.collection("_meta").doc("summary");
+  let summariesData = {}; // { M1: {qaPercent, floor, status, ready, updatedAt}, ... }
 </script>
 
 <script>
-  // ---------------- APP LOGIC ----------------
-  let TOTAL_MODULES = 0;
-  let MODULES_PER_FLOOR = 0;
-
   const ROLE_PASSWORDS = { otk: "otk123", chief: "1212" };
   const ROLE_LABELS = {
     viewer: "Только просмотр",
@@ -289,7 +257,6 @@
 
   const OTK_USERS = ["Большая","Соловьева","Михалева","Таймазов","Козлечкова","Барсегян","Стручкова"];
 
-  // ---------- ЗАДАЧИ ----------
   const TASKS_STANDARD = [
     "Смонтированные перегородки из ГКЛ на металлическом каркасе в два слоя с зачеканкой швов и звукоизоляцией.",
     "Смонтированный сантехнический модуль с залитым технологическим швом по контуру.",
@@ -357,34 +324,14 @@
     "Отделка":  [1, 16, 17, 18, 19, 20, 21]
   };
 
-  // ---------- HELPERS ----------
-  function applySectionConfigToUi() {
-    const cfg = getSectionConfig();
-    MODULES_PER_FLOOR = cfg.modulesPerFloor;
-    TOTAL_MODULES = (cfg.floorEnd - cfg.floorStart + 1) * cfg.modulesPerFloor;
-
-    const sub = document.getElementById("headerSubtitle");
-    if (sub) sub.textContent = cfg.subtitle;
-  }
-
   function getModuleNumber(moduleId) { return parseInt(moduleId.replace("M",""), 10) || 1; }
-
-  function getFloor(moduleId) {
-    const cfg = getSectionConfig();
-    const num = getModuleNumber(moduleId);
-    return cfg.floorStart + Math.floor((num - 1) / MODULES_PER_FLOOR);
-  }
-
-  function getPositionOnFloor(moduleId) {
-    const num = getModuleNumber(moduleId);
-    return ((num - 1) % MODULES_PER_FLOOR) + 1; // 1..modulesPerFloor
-  }
+  function getFloor(moduleId) { const num = getModuleNumber(moduleId); return FLOOR_START + Math.floor((num - 1) / MODULES_PER_FLOOR); }
+  function getPositionOnFloor(moduleId) { const num = getModuleNumber(moduleId); return ((num - 1) % MODULES_PER_FLOOR) + 1; }
 
   function getModuleType(moduleId) {
     const pos = getPositionOnFloor(moduleId);
-    const cfg = getSectionConfig();
-    if (cfg.adjLluPos && pos === cfg.adjLluPos) return "adj_llu";
-    if (cfg.lluPos && pos === cfg.lluPos) return "llu";
+    if (pos === ADJ_LLU_POS) return "adj_llu";
+    if (pos === LLU_POS) return "llu";
     return "standard";
   }
 
@@ -397,16 +344,11 @@
 
   function getVisibleTaskIndices(moduleId) {
     const type = getModuleType(moduleId);
-
     if (type !== "standard") {
       const len = getTasksForModule(moduleId).length;
       return Array.from({ length: len }, (_, i) => i);
     }
-
-    if (currentGroup === "Все") {
-      return Array.from({ length: TASKS_STANDARD.length }, (_, i) => i);
-    }
-
+    if (currentGroup === "Все") return Array.from({ length: TASKS_STANDARD.length }, (_, i) => i);
     const nums = GROUP_INDICES[currentGroup] || [];
     return nums.map(n => n - 1).filter(i => i >= 0 && i < TASKS_STANDARD.length);
   }
@@ -485,8 +427,8 @@
     const hint = document.getElementById("moduleTypeHint");
     const type = getModuleType(currentModuleId);
     if (type === "standard") hint.textContent = "Типовой модуль";
-    else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ";
-    else hint.textContent = "Модуль ЛЛУ";
+    else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ (4-й)";
+    else hint.textContent = "Модуль ЛЛУ (5-й)";
   }
 
   function updateModuleFloorInfo() {
@@ -547,9 +489,7 @@
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
       const type = getModuleType(id);
-      const label =
-        type === "standard" ? "" :
-        (type === "adj_llu" ? " (смежн.)" : " (ЛЛУ)");
+      const label = type === "standard" ? "" : (type === "adj_llu" ? " (4-й, смежн.)" : " (5-й, ЛЛУ)");
       const opt = document.createElement("option");
       opt.value = id;
       opt.textContent = id + label;
@@ -571,7 +511,6 @@
   }
 
   function populateFloorFilter() {
-    const cfg = getSectionConfig();
     const select = document.getElementById("floorFilterSelect");
     if (!select) return;
     select.innerHTML = "";
@@ -581,13 +520,12 @@
     optAll.textContent = "Все этажи";
     select.appendChild(optAll);
 
-    for (let floor = cfg.floorStart; floor <= cfg.floorEnd; floor++) {
+    for (let floor = FLOOR_START; floor <= FLOOR_END; floor++) {
       const opt = document.createElement("option");
       opt.value = String(floor);
       opt.textContent = floor + " этаж";
       select.appendChild(opt);
     }
-
     select.value = currentFloorFilter;
   }
 
@@ -611,10 +549,9 @@
     return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
   }
 
-  // ---------- Firestore: load/save per module ----------
+  // ---------- Firestore ----------
   async function loadModuleFromFirestore(moduleId) {
     ensureModuleArraysSize(moduleId);
-
     try {
       const snap = await moduleRef(moduleId).get();
       if (snap.exists) {
@@ -632,23 +569,69 @@
     }
   }
 
+  async function loadSummaryFromFirestore() {
+    try {
+      const snap = await summaryRef.get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        summariesData = (data.modules && typeof data.modules === "object") ? data.modules : {};
+      } else {
+        summariesData = {};
+      }
+    } catch (e) {
+      console.warn("Не удалось загрузить summary из Firestore:", e);
+      summariesData = {};
+    }
+  }
+
   let saveTimer = null;
   function saveToFirestore() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        const m = modulesData[currentModuleId];
-        await moduleRef(currentModuleId).set(
-          { qaTasks: m.qaTasks, comments: m.comments, qaUsers: m.qaUsers, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+        const moduleId = currentModuleId;
+        const m = modulesData[moduleId];
+
+        // 1) сохраняем модуль
+        await moduleRef(moduleId).set(
+          {
+            qaTasks: m.qaTasks,
+            comments: m.comments,
+            qaUsers: m.qaUsers,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+
+        // 2) обновляем сводную (только для этого модуля) в одном документе
+        const qaPercent = calculatePercent(m.qaTasks);
+        const floor = getFloor(moduleId);
+        const status = statusByPercent(qaPercent);
+        const ready = (qaPercent === 100);
+
+        // локальный кэш
+        summariesData[moduleId] = { qaPercent, floor, status, ready };
+
+        const fieldPath = `modules.${moduleId}`;
+        await summaryRef.set(
+          {
+            [fieldPath]: {
+              qaPercent,
+              floor,
+              status,
+              ready,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }
+          },
           { merge: true }
         );
       } catch (e) {
-        console.warn("Не удалось сохранить модуль в Firestore:", currentModuleId, e);
+        console.warn("Не удалось сохранить в Firestore:", currentModuleId, e);
       }
     }, 250);
   }
 
-  // ---------- UI: tasks / summary ----------
+  // ---------- UI ----------
   function renderTasks() {
     ensureModuleArraysSize(currentModuleId);
 
@@ -767,7 +750,7 @@
         }
 
         updateModuleStats();
-        updateSummaryTable();
+        updateSummaryTable(); // сводная обновится локально (по summariesData)
         saveToFirestore();
       });
 
@@ -798,10 +781,10 @@
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
-      ensureModuleArraysSize(id);
 
-      const data = modulesData[id];
-      const qaPercent = calculatePercent(data.qaTasks);
+      const s = summariesData[id] || {};
+      const qaPercent = Number.isFinite(s.qaPercent) ? s.qaPercent : 0;
+
       const floor = getFloor(id);
       const ready = (qaPercent === 100);
 
@@ -857,9 +840,7 @@
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
-      ensureModuleArraysSize(id);
-      const data = modulesData[id];
-      const qaPercent = calculatePercent(data.qaTasks);
+      const qaPercent = Number.isFinite(summariesData[id]?.qaPercent) ? summariesData[id].qaPercent : 0;
       const floor = getFloor(id);
       rows.push([id, String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
     }
@@ -872,7 +853,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `svodka_${getSectionConfig().firestoreDocId}.csv`;
+    a.download = "svodka_section3.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -910,7 +891,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `checklist_${getSectionConfig().firestoreDocId}_${moduleId}.csv`;
+    a.download = `checklist_section3_${moduleId}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -937,46 +918,30 @@
     const contents = document.querySelectorAll(".tab-content");
 
     buttons.forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const tab = btn.getAttribute("data-tab");
         buttons.forEach((b) => b.classList.remove("active"));
         contents.forEach((c) => c.classList.remove("tab-active"));
         btn.classList.add("active");
         document.getElementById("tab-" + tab).classList.add("tab-active");
+
+        if (tab === "section") {
+          await loadSummaryFromFirestore(); // 1 чтение
+          updateSummaryTable();
+        }
       });
     });
   }
 
-  async function switchSection(newKey) {
-    currentSectionKey = newKey;
-
-    // сброс состояния для новой секции
-    loadedModules.clear();
-    modulesData = {};
-    currentModuleId = "M1";
-    currentGroup = "Все";
-    currentFloorFilter = "all";
-
-    applySectionConfigToUi();
-    initModulesData();
-    await loadModuleFromFirestore(currentModuleId);
-
-    populateModuleSelect();
-    populateGroupSelect();
-    populateFloorFilter();
-
-    renderTasks();
-    updateSummaryTable();
-    updateRoleUI();
-  }
-
   document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
-
-    // применяем секцию по умолчанию
-    applySectionConfigToUi();
     initModulesData();
+
+    // загрузим текущий модуль
     await loadModuleFromFirestore(currentModuleId);
+
+    // загрузим summary один раз (чтобы сводная не была пустой даже до перехода)
+    await loadSummaryFromFirestore();
 
     populateModuleSelect();
     populateGroupSelect();
@@ -985,11 +950,6 @@
     renderTasks();
     updateSummaryTable();
     updateRoleUI();
-
-    document.getElementById("sectionSelect").value = currentSectionKey;
-    document.getElementById("sectionSelect").addEventListener("change", async (e) => {
-      await switchSection(e.target.value);
-    });
 
     document.getElementById("moduleSelect").addEventListener("change", async (e) => {
       currentModuleId = e.target.value;
@@ -1017,4 +977,3 @@
 
 </body>
 </html>
-
