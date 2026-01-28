@@ -239,25 +239,25 @@
   // Секция 2: как было (6 мод/этаж), ЛЛУ pos 4, смежный pos 3
   // Секция 3: 8 мод/этаж; ЛЛУ пока отключено (все standard), потому что позиций ты не указала.
   const SECTIONS = {
-    s2: {
-      subtitle: "Черёмушки · Корпус 1 · секция 2 · ОТК",
-      firestoreDocId: "c1_s2",
-      floorStart: 2,
-      floorEnd: 23,
-      modulesPerFloor: 6,
-      adjLluPos: 3,
-      lluPos: 4
-    },
-    s3: {
-      subtitle: "Черёмушки · Корпус 1 · секция 3 · ОТК",
-      firestoreDocId: "c1_s3",
-      floorStart: 2,
-      floorEnd: 23,
-      modulesPerFloor: 8,
-      adjLluPos: null,
-      lluPos: null
-    }
-  };
+  s2: {
+    subtitle: "Черёмушки · Корпус 1 · секция 2 · ОТК",
+    firestoreDocId: "c1_s2",
+    floorStart: 2,
+    floorEnd: 23,
+    modulesPerFloor: 6,
+    adjLluPos: 3,
+    lluPos: 4
+  },
+  s3: {
+    subtitle: "Черёмушки · Корпус 1 · секция 3 · ОТК",
+    firestoreDocId: "c1_s3",
+    floorStart: 2,
+    floorEnd: 23,
+    modulesPerFloor: 8,
+    adjLluPos: 4,   // ← смежный к ЛЛУ
+    lluPos: 5       // ← ЛЛУ
+  }
+};
 
   let currentSectionKey = "s2";
 
@@ -1017,3 +1017,4 @@
 
 </body>
 </html>
+
