@@ -6,507 +6,87 @@
 
 <style>
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #F8FAFC;
-    color: #0f172a;
-  }
+  body { margin: 0; font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F8FAFC; color: #0f172a; }
+  header { background: #1E3A8A; color: white; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header small { opacity: 0.9; font-size: 13px; }
+  .role-bar { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .role-select { padding: 6px 10px; border-radius: 8px; border: none; background: white; color: #1E3A8A; font-weight: 600; }
+  .role-badge { background: rgba(255,255,255,0.16); padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+  main { padding: 14px; max-width: 1200px; margin: 0 auto; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #E2E8F0; }
+  .tab-button { padding: 8px 14px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; color: #64748B; border-radius: 8px 8px 0 0; }
+  .tab-button.active { background: white; color: #1E3A8A; box-shadow: 0 -1px 0 white; }
+  .tab-content { display: none; }
+  .tab-content.tab-active { display: block; }
+  .card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); border: 1px solid #E2E8F0; }
+  .card-header-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .card-title { display: flex; align-items: center; gap: 8px; }
+  .card-title-icon { width: 22px; height: 22px; border-radius: 999px; background: #DBEAFE; display: flex; align-items: center; justify-content: center; color: #1D4ED8; font-size: 13px; }
+  .card h2 { font-size: 17px; margin: 0; color: #1e3a8a; }
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; }
+  label { font-size: 12px; font-weight: 500; color: #475569; display: block; margin-bottom: 2px; }
+  select { padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: white; color: #1E3A8A; font-weight: 600; min-width: 80px; }
+  .info-row { margin: 4px 0 8px; font-size: 12px; color: #475569; display: flex; justify-content: space-between; gap: 10px; }
+  .progress-wrap { display: flex; align-items: center; gap: 10px; }
+  .progress-ring { width: 46px; height: 46px; }
+  .progress-ring circle { fill: transparent; stroke-width: 5; transform: rotate(-90deg); transform-origin: 50% 50%; }
+  .progress-bg { stroke: #E5E7EB; }
+  .progress-value { stroke: #3B82F6; stroke-linecap: round; stroke-dasharray: 0 999; stroke-dashoffset: 0; }
+  .progress-label { font-size: 11px; color: #64748B; }
+  .tasks { max-height: 60vh; overflow-y: auto; margin-top: 10px; border-top: 1px solid #E2E8F0; }
+  .task-item { padding: 8px 4px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 10px; }
+  .task-num { width: 26px; text-align: right; font-size: 12px; color: #64748B; }
+  .task-text { flex: 1; font-size: 13px; color: #0f172a; }
+  .task-checkbox { display: flex; gap: 4px; align-items: center; color: #475569; font-size: 12px; white-space: nowrap; }
+  .task-checkbox input { width: 16px; height: 16px; }
+  .task-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 140px; }
+  .task-comment-input { width: 160px; max-width: 50vw; padding: 3px 6px; font-size: 11px; border-radius: 6px; border: 1px solid #CBD5E1; }
+  .task-user-select { width: 160px; max-width: 50vw; padding: 3px 6px; font-size: 11px; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; }
+  @media (max-width: 480px) { .task-user-select { width: 100%; max-width: 100%; } }
 
-  /* ---------------- HEADER ---------------- */
+  .footer-status { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 13px; gap: 10px; flex-wrap: wrap; }
+  .badge { padding: 6px 12px; border-radius: 10px; font-weight: 600; font-size: 12px; }
+  .badge-ready { background: #DCFCE7; color: #166534; }
+  .badge-not-ready { background: #FEE2E2; color: #B91C1C; }
+  .badge-inprogress { background: #DBEAFE; color: #1D4ED8; }
+  button { padding: 6px 12px; background: #3B82F6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; }
+  button:hover { background: #2563EB; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  header {
-    background: #1E3A8A;
-    color: white;
-    padding: 14px 22px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  header h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  header small {
-    opacity: 0.9;
-    font-size: 13px;
-  }
-
-  .role-bar {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 13px;
-  }
-
-  .role-select {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: none;
-    background: white;
-    color: #1E3A8A;
-    font-weight: 600;
-  }
-
-  .role-badge {
-    background: rgba(255,255,255,0.16);
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-  }
-
-  /* ---------------- LAYOUT & TABS ---------------- */
-
-  main {
-    padding: 14px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid #E2E8F0;
-  }
-
-  .tab-button {
-    padding: 8px 14px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748B;
-    border-radius: 8px 8px 0 0;
-  }
-
-  .tab-button.active {
-    background: white;
-    color: #1E3A8A;
-    box-shadow: 0 -1px 0 white;
-  }
-
-  .tab-content {
-    display: none;
-  }
-
-  .tab-content.tab-active {
-    display: block;
-  }
-
-  .card {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
-    border: 1px solid #E2E8F0;
-  }
-
-  .card-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .card-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-title-icon {
-    width: 22px;
-    height: 22px;
-    border-radius: 999px;
-    background: #DBEAFE;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1D4ED8;
-    font-size: 13px;
-  }
-
-  .card h2 {
-    font-size: 17px;
-    margin: 0;
-    color: #1e3a8a;
-  }
-
-  .controls {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #475569;
-    display: block;
-    margin-bottom: 2px;
-  }
-
-  select {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #CBD5E1;
-    background: white;
-    color: #1E3A8A;
-    font-weight: 600;
-    min-width: 80px;
-  }
-
-  .info-row {
-    margin: 4px 0 8px;
-    font-size: 12px;
-    color: #475569;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  /* ---------------- PROGRESS RINGS ---------------- */
-
-  .progress-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .progress-ring {
-    width: 46px;
-    height: 46px;
-  }
-
-  .progress-ring circle {
-    fill: transparent;
-    stroke-width: 5;
-    transform: rotate(-90deg);
-    transform-origin: 50% 50%;
-  }
-
-  .progress-bg {
-    stroke: #E5E7EB;
-  }
-
-  .progress-value {
-    stroke: #3B82F6;
-    stroke-linecap: round;
-    stroke-dasharray: 0 999;
-    stroke-dashoffset: 0;
-  }
-
-  .progress-label {
-    font-size: 11px;
-    color: #64748B;
-  }
-
-  /* ---------------- TASKS ---------------- */
-
-  .tasks {
-    max-height: 60vh;
-    overflow-y: auto;
-    margin-top: 10px;
-    border-top: 1px solid #E2E8F0;
-  }
-
-  .task-item {
-    padding: 8px 4px;
-    border-bottom: 1px solid #E2E8F0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .task-num {
-    width: 26px;
-    text-align: right;
-    font-size: 12px;
-    color: #64748B;
-  }
-
-  .task-text {
-    flex: 1;
-    font-size: 13px;
-    color: #0f172a;
-  }
-
-  .task-checkbox {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    color: #475569;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-
-  .task-checkbox input {
-    width: 16px;
-    height: 16px;
-  }
-
-  .task-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    min-width: 140px;
-  }
-
-  .task-comment-input {
-    width: 160px;
-    max-width: 50vw;
-    padding: 3px 6px;
-    font-size: 11px;
-    border-radius: 6px;
-    border: 1px solid #CBD5E1;
-  }
- .task-user-select {
-  width: 160px;
-  max-width: 50vw;
-  padding: 3px 6px;
-  font-size: 11px;
-  border-radius: 6px;
-  border: 1px solid #CBD5E1;
-  background: #FFFFFF;
-}
-
-@media (max-width: 480px) {
-  .task-user-select {
-    width: 100%;
-    max-width: 100%;
-  }
-}
-
-  /* ---------------- STATUS / BUTTONS ---------------- */
-
-  .footer-status {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #E2E8F0;
-    font-size: 13px;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .badge {
-    padding: 6px 12px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 12px;
-  }
-
-  .badge-ready {
-    background: #DCFCE7;
-    color: #166534;
-  }
-
-  .badge-not-ready {
-    background: #FEE2E2;
-    color: #B91C1C;
-  }
-
-  .badge-inprogress {
-    background: #DBEAFE;
-    color: #1D4ED8;
-  }
-
-  button {
-    padding: 6px 12px;
-    background: #3B82F6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 12px;
-  }
-
-  button:hover {
-    background: #2563EB;
-  }
-
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* ---------------- TABLE ---------------- */
-
-  .summary-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 12px 0 6px;
-    gap: 8px;
-  }
-
-  .summary-header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .tag {
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: #DBEAFE;
-    color: #1E3A8A;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .summary-table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-  }
-
-  .summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 4px;
-    min-width: 360px;
-  }
-
-  .summary-table th {
-    background: #EFF6FF;
-    font-size: 11px;
-    padding: 6px 8px;
-    text-transform: uppercase;
-    border-bottom: 2px solid #BFDBFE;
-    color: #1e3a8a;
-  }
-
-  .summary-table td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #E2E8F0;
-    font-size: 12px;
-  }
-
-  .row-ready {
-    background: #ECFDF5;
-  }
-
-  .percent-cell {
-    font-variant-numeric: tabular-nums;
-  }
-
-  #floorFilterSelect {
-    padding: 4px 8px;
-    border-radius: 8px;
-    border: 1px solid #CBD5E1;
-    background: white;
-    color: #1E3A8A;
-    font-size: 11px;
-    font-weight: 500;
-  }
-
-  .percent-colored {
-    font-weight: 600;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    text-align: center;
-    min-width: 55px;
-    display: inline-block;
-  }
+  .summary-header-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 6px; gap: 8px; }
+  .summary-header-left { display: flex; align-items: center; gap: 8px; }
+  .tag { padding: 4px 10px; border-radius: 999px; background: #DBEAFE; color: #1E3A8A; font-size: 12px; font-weight: 600; }
+  .summary-table-wrapper { width: 100%; overflow-x: auto; }
+  .summary-table { width: 100%; border-collapse: collapse; margin-top: 4px; min-width: 360px; }
+  .summary-table th { background: #EFF6FF; font-size: 11px; padding: 6px 8px; text-transform: uppercase; border-bottom: 2px solid #BFDBFE; color: #1e3a8a; }
+  .summary-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; font-size: 12px; }
+  .row-ready { background: #ECFDF5; }
+  .percent-cell { font-variant-numeric: tabular-nums; }
+  #floorFilterSelect { padding: 4px 8px; border-radius: 8px; border: 1px solid #CBD5E1; background: white; color: #1E3A8A; font-size: 11px; font-weight: 500; }
+  .percent-colored { font-weight: 600; color: white; padding: 4px 8px; border-radius: 6px; text-align: center; min-width: 55px; display: inline-block; }
 
   @media (max-width: 600px) {
-    header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    .role-bar {
-      align-self: flex-end;
-    }
+    header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .role-bar { align-self: flex-end; }
   }
-
   @media (max-width: 480px) {
-    body {
-      font-size: 14px;
-    }
-
-    header {
-      padding: 10px 12px;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 6px;
-    }
-
-    header h1 {
-      font-size: 16px;
-    }
-
-    main {
-      padding: 10px;
-    }
-
-    .card {
-      padding: 12px;
-      border-radius: 12px;
-    }
-
-    .controls {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .info-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
-    }
-
-    .tasks {
-      max-height: 55vh;
-    }
-
-    .task-item {
-      align-items: flex-start;
-    }
-
-    .task-checkbox {
-      font-size: 13px;
-    }
-
-    .task-checkbox input {
-      width: 20px;
-      height: 20px;
-    }
-
-    .tabs {
-      overflow-x: auto;
-    }
-
-    .tab-button {
-      white-space: nowrap;
-      padding: 8px 10px;
-    }
-
-    .summary-header-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
-    }
-
-    .task-right {
-      align-items: stretch;
-    }
-    .task-comment-input {
-      width: 100%;
-      max-width: 100%;
-    }
+    body { font-size: 14px; }
+    header { padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 6px; }
+    header h1 { font-size: 16px; }
+    main { padding: 10px; }
+    .card { padding: 12px; border-radius: 12px; }
+    .controls { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .info-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .tasks { max-height: 55vh; }
+    .task-item { align-items: flex-start; }
+    .task-checkbox { font-size: 13px; }
+    .task-checkbox input { width: 20px; height: 20px; }
+    .tabs { overflow-x: auto; }
+    .tab-button { white-space: nowrap; padding: 8px 10px; }
+    .summary-header-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .task-right { align-items: stretch; }
+    .task-comment-input { width: 100%; max-width: 100%; }
   }
 </style>
 </head>
@@ -632,7 +212,7 @@
   </div>
 </main>
 
-<!-- ---------------- FIREBASE ---------------- -->
+<!-- ---------------- FIREBASE (compat) ---------------- -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
@@ -641,6 +221,7 @@
     apiKey: "AIzaSyBwWguFZ48BuuYpIG8nEX1zHAIx3BOXFsI",
     authDomain: "qc-modules.firebaseapp.com",
     projectId: "qc-modules",
+    // storageBucket не нужен для Firestore; можно оставить как есть
     storageBucket: "qc-modules.firebasestorage.app",
     messagingSenderId: "430400564818",
     appId: "1:430400564818:web:2e46915026cedd4323798b",
@@ -649,7 +230,14 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
- const docRef = db.collection("qc_modules").doc("section1_mod6");
+
+  // "Секция" (один документ)
+  const sectionRef = db.collection("qc_modules").doc("section1_mod6");
+
+  // Каждый модуль — отдельный документ в подколлекции
+  function moduleRef(moduleId) {
+    return sectionRef.collection("modules").doc(moduleId);
+  }
 </script>
 
 <!-- ---------------- APP LOGIC ---------------- -->
@@ -657,26 +245,14 @@
   const TOTAL_MODULES = 132;        // 22 этажа (2–23) * 6 модулей
   const MODULES_PER_FLOOR = 6;
 
-  const ROLE_PASSWORDS = {
-    otk: "otk123",
-    chief: "1212"
-  };
-
+  const ROLE_PASSWORDS = { otk: "otk123", chief: "1212" };
   const ROLE_LABELS = {
     viewer: "Только просмотр",
     otk: "ОТК: можно только ставить галочки",
     chief: "Рук. ОТК: можно ставить и снимать галочки"
   };
 
-  const OTK_USERS = [
-    "Большая",
-    "Соловьева",
-    "Михалева",
-    "Таймазов",
-    "Козлечкова",
-    "Барсегян",
-    "Стручкова"
-  ];
+  const OTK_USERS = ["Большая","Соловьева","Михалева","Таймазов","Козлечкова","Барсегян","Стручкова"];
 
   // ---------- ЗАДАЧИ ----------
   const TASKS_STANDARD = [
@@ -736,41 +312,25 @@
     "Монтаж противопожарной отсечки СПК."
   ];
 
-  // ---------- ГРУППЫ (фильтр) ----------
-  // Оставляем прежние названия групп для типовых.
   const GROUP_NAMES = ["Все", "СТК", "ВИС", "ЭОМ", "Потолки", "Фасад", "Отделка"];
-
-  // Индексы задач (1-based) только для типового списка (TASKS_STANDARD)
   const GROUP_INDICES = {
     "СТК":      [2, 3],
     "ВИС":      [8, 9, 10, 11, 12, 13, 14, 15],
     "ЭОМ":      [5, 6, 7],
     "Потолки":  [4],
-    "Фасад":    [22, 23, 24], // кронштейны/утеплитель/отсечка — в конце
+    "Фасад":    [22, 23, 24],
     "Отделка":  [1, 16, 17, 18, 19, 20, 21]
   };
 
-  // ---------- ТИП МОДУЛЯ ПО ПОЗИЦИИ НА ЭТАЖЕ ----------
-  function getModuleNumber(moduleId) {
-    return parseInt(moduleId.replace("M", ""), 10) || 1;
-  }
-
-  // 2 этаж начинается с М1
-  function getFloor(moduleId) {
-    const num = getModuleNumber(moduleId);
-    return 2 + Math.floor((num - 1) / MODULES_PER_FLOOR);
-  }
-
-  function getPositionOnFloor(moduleId) {
-    const num = getModuleNumber(moduleId);
-    return ((num - 1) % MODULES_PER_FLOOR) + 1; // 1..6
-  }
+  function getModuleNumber(moduleId) { return parseInt(moduleId.replace("M",""), 10) || 1; }
+  function getFloor(moduleId) { const num = getModuleNumber(moduleId); return 2 + Math.floor((num - 1) / MODULES_PER_FLOOR); }
+  function getPositionOnFloor(moduleId) { const num = getModuleNumber(moduleId); return ((num - 1) % MODULES_PER_FLOOR) + 1; }
 
   function getModuleType(moduleId) {
     const pos = getPositionOnFloor(moduleId);
-    if (pos === 3) return "adj_llu";  // смежный с ЛЛУ
-    if (pos === 4) return "llu";      // ЛЛУ
-    return "standard";                // типовые 1,2,5,6
+    if (pos === 3) return "adj_llu";
+    if (pos === 4) return "llu";
+    return "standard";
   }
 
   function getTasksForModule(moduleId) {
@@ -780,24 +340,13 @@
     return TASKS_STANDARD;
   }
 
-  function isLluModule(moduleId) {
-    return getModuleType(moduleId) !== "standard";
-  }
-
   function getVisibleTaskIndices(moduleId) {
     const type = getModuleType(moduleId);
-
-    // Для смежного и ЛЛУ показываем ВСЕ задачи (без группировки)
     if (type !== "standard") {
       const len = getTasksForModule(moduleId).length;
       return Array.from({ length: len }, (_, i) => i);
     }
-
-    // Типовой модуль: группировка работает
-    if (currentGroup === "Все") {
-      return Array.from({ length: TASKS_STANDARD.length }, (_, i) => i);
-    }
-
+    if (currentGroup === "Все") return Array.from({ length: TASKS_STANDARD.length }, (_, i) => i);
     const nums = GROUP_INDICES[currentGroup] || [];
     return nums.map(n => n - 1).filter(i => i >= 0 && i < TASKS_STANDARD.length);
   }
@@ -810,16 +359,15 @@
   let currentFloorFilter = "all";
   const authenticatedRoles = { otk: false, chief: false };
 
+  // какие модули уже загружены из Firestore (чтобы не дергать лишний раз)
+  const loadedModules = new Set();
+
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
     const len = tasks.length;
 
     if (!modulesData[moduleId]) {
-      modulesData[moduleId] = {
-        qaTasks: Array(len).fill(false),
-        comments: Array(len).fill(""),
-        qaUsers: Array(len).fill("")
-      };
+      modulesData[moduleId] = { qaTasks: Array(len).fill(false), comments: Array(len).fill(""), qaUsers: Array(len).fill("") };
       return;
     }
 
@@ -833,7 +381,6 @@
     const newQaUsers = Array(len).fill("");
 
     const copyLen = Math.min(len, m.qaTasks.length, m.comments.length || len, m.qaUsers.length || len);
-
     for (let i = 0; i < copyLen; i++) {
       newQA[i] = !!m.qaTasks[i];
       newComments[i] = m.comments[i] || "";
@@ -846,9 +393,7 @@
   }
 
   function initModulesData() {
-    for (let i = 1; i <= TOTAL_MODULES; i++) {
-      ensureModuleArraysSize("M" + i);
-    }
+    for (let i = 1; i <= TOTAL_MODULES; i++) ensureModuleArraysSize("M" + i);
   }
 
   function calculatePercent(arr) {
@@ -893,7 +438,6 @@
   function updateGroupUIForModule() {
     const select = document.getElementById("groupSelect");
     if (!select) return;
-    // Группы доступны только на типовых
     select.disabled = (getModuleType(currentModuleId) !== "standard");
   }
 
@@ -927,7 +471,6 @@
   function handleRoleChange(e) {
     const newRole = e.target.value;
     if (newRole === "viewer") return setRole("viewer");
-
     if (authenticatedRoles[newRole]) return setRole(newRole);
 
     const pwd = prompt("Введите пароль для ОТК:");
@@ -946,9 +489,7 @@
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
       const type = getModuleType(id);
-      const label =
-        type === "standard" ? "" :
-        (type === "adj_llu" ? " (3-й, смежн.)" : " (4-й, ЛЛУ)");
+      const label = type === "standard" ? "" : (type === "adj_llu" ? " (3-й, смежн.)" : " (4-й, ЛЛУ)");
       const opt = document.createElement("option");
       opt.value = id;
       opt.textContent = id + label;
@@ -979,14 +520,13 @@
     optAll.textContent = "Все этажи";
     select.appendChild(optAll);
 
-    const maxFloor = getFloor("M" + TOTAL_MODULES); // будет 23
+    const maxFloor = getFloor("M" + TOTAL_MODULES);
     for (let floor = 2; floor <= maxFloor; floor++) {
       const opt = document.createElement("option");
       opt.value = String(floor);
       opt.textContent = floor + " этаж";
       select.appendChild(opt);
     }
-
     select.value = currentFloorFilter;
   }
 
@@ -1010,6 +550,51 @@
     return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
   }
 
+  // ---------- Firestore: загрузка/сохранение ОДНОГО модуля ----------
+  async function loadModuleFromFirestore(moduleId) {
+    ensureModuleArraysSize(moduleId);
+
+    try {
+      const snap = await moduleRef(moduleId).get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        modulesData[moduleId] = {
+          qaTasks: Array.isArray(data.qaTasks) ? data.qaTasks : modulesData[moduleId].qaTasks,
+          comments: Array.isArray(data.comments) ? data.comments : modulesData[moduleId].comments,
+          qaUsers: Array.isArray(data.qaUsers) ? data.qaUsers : modulesData[moduleId].qaUsers
+        };
+        ensureModuleArraysSize(moduleId);
+      }
+      loadedModules.add(moduleId);
+    } catch (e) {
+      console.warn("Не удалось загрузить модуль из Firestore:", moduleId, e);
+    }
+  }
+
+  let saveTimer = null;
+  function saveToFirestore() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const m = modulesData[currentModuleId];
+        await moduleRef(currentModuleId).set(
+          {
+            qaTasks: m.qaTasks,
+            comments: m.comments,
+            qaUsers: m.qaUsers,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn("Не удалось сохранить модуль в Firestore:", currentModuleId, e);
+        // Для диагностики можно включить:
+        // alert((e && e.message) ? e.message : String(e));
+      }
+    }, 250);
+  }
+
+  // ---------- UI ----------
   function renderTasks() {
     ensureModuleArraysSize(currentModuleId);
 
@@ -1059,18 +644,17 @@
         userSelect.appendChild(opt);
       });
 
-      const savedUser = moduleData.qaUsers[taskIndex] || "";
-      userSelect.value = savedUser;
+      userSelect.value = moduleData.qaUsers[taskIndex] || "";
       userSelect.disabled = (currentRole === "viewer") || !moduleData.qaTasks[taskIndex];
 
       userSelect.addEventListener("change", () => {
-  if (currentRole === "viewer") {
-    userSelect.value = moduleData.qaUsers[taskIndex] || "";
-    return;
-  }
-  moduleData.qaUsers[taskIndex] = userSelect.value || "";
-  saveToFirestore();
-});
+        if (currentRole === "viewer") {
+          userSelect.value = moduleData.qaUsers[taskIndex] || "";
+          return;
+        }
+        moduleData.qaUsers[taskIndex] = userSelect.value || "";
+        saveToFirestore();
+      });
 
       const commentInput = document.createElement("input");
       commentInput.type = "text";
@@ -1294,29 +878,6 @@
     saveToFirestore();
   }
 
-  async function loadFromFirestore() {
-    try {
-      const snap = await docRef.get();
-      if (snap.exists) {
-        const data = snap.data();
-        if (data && data.modulesData && typeof data.modulesData === "object") {
-          modulesData = data.modulesData;
-        }
-      }
-    } catch (e) {
-      console.warn("Не удалось загрузить из Firestore:", e);
-    }
-    initModulesData();
-  }
-
-  async function saveToFirestore() {
-    try {
-      await docRef.set({ modulesData }, { merge: true });
-    } catch (e) {
-      console.warn("Не удалось сохранить в Firestore:", e);
-    }
-  }
-
   function initTabs() {
     const buttons = document.querySelectorAll(".tab-button");
     const contents = document.querySelectorAll(".tab-content");
@@ -1334,7 +895,12 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
-    await loadFromFirestore();
+
+    // локальная инициализация структуры (пустая)
+    initModulesData();
+
+    // загружаем текущий модуль из Firestore
+    await loadModuleFromFirestore(currentModuleId);
 
     populateModuleSelect();
     populateGroupSelect();
@@ -1344,9 +910,16 @@
     updateSummaryTable();
     updateRoleUI();
 
-    document.getElementById("moduleSelect").addEventListener("change", (e) => {
+    document.getElementById("moduleSelect").addEventListener("change", async (e) => {
       currentModuleId = e.target.value;
+
+      // подгружаем модуль один раз (потом берём из памяти)
+      if (!loadedModules.has(currentModuleId)) {
+        await loadModuleFromFirestore(currentModuleId);
+      }
+
       renderTasks();
+      updateSummaryTable();
     });
 
     document.getElementById("groupSelect").addEventListener("change", (e) => {
@@ -1360,14 +933,11 @@
     });
 
     document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
-
     document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
     document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
     document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
   });
 </script>
+
 </body>
 </html>
-
-
-
