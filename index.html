@@ -52,7 +52,6 @@
   .task-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 140px; }
   .task-comment-input { width: 160px; max-width: 50vw; padding: 3px 6px; font-size: 11px; border-radius: 6px; border: 1px solid #CBD5E1; }
   .task-user-select { width: 160px; max-width: 50vw; padding: 3px 6px; font-size: 11px; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; }
-  @media (max-width: 480px) { .task-user-select { width: 100%; max-width: 100%; } }
 
   .footer-status { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 13px; gap: 10px; flex-wrap: wrap; }
 
@@ -77,11 +76,6 @@
   .percent-cell { font-variant-numeric: tabular-nums; }
   #floorFilterSelect { padding: 4px 8px; border-radius: 8px; border: 1px solid #CBD5E1; background: white; color: #1E3A8A; font-size: 11px; font-weight: 500; }
   .percent-colored { font-weight: 600; color: white; padding: 4px 8px; border-radius: 6px; text-align: center; min-width: 55px; display: inline-block; }
-
-  @media (max-width: 600px) {
-    header { flex-direction: column; align-items: flex-start; }
-    .role-bar { align-self: flex-end; }
-  }
 </style>
 </head>
 
@@ -110,7 +104,6 @@
     <button class="tab-button" data-tab="section">Сводная по секции</button>
   </div>
 
-  <!-- TAB: MODULE -->
   <div class="tab-content tab-active" id="tab-module">
     <section class="card">
       <div class="card-header-row">
@@ -157,7 +150,6 @@
     </section>
   </div>
 
-  <!-- TAB: SECTION -->
   <div class="tab-content" id="tab-section">
     <section class="card">
       <div class="card-header-row">
@@ -207,7 +199,6 @@
   </div>
 </main>
 
-<!-- ---------------- FIREBASE (compat) ---------------- -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
@@ -225,7 +216,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // ОДНА СЕКЦИЯ: корпус 1, секция 3
+  // СЕКЦИЯ 3
   const SECTION_DOC_ID = "c1_s3";
 
   const FLOOR_START = 2;
@@ -233,18 +224,46 @@
   const MODULES_PER_FLOOR = 8;
   const TOTAL_MODULES = (FLOOR_END - FLOOR_START + 1) * MODULES_PER_FLOOR; // 176
 
-  // позиция на этаже: 4 смежный, 5 ЛЛУ
+  // секция 3: 4-й смежный, 5-й ЛЛУ
   const ADJ_LLU_POS = 4;
   const LLU_POS = 5;
 
   const sectionRef = db.collection("qc_modules").doc(SECTION_DOC_ID);
-  function moduleRef(moduleId) {
-    return sectionRef.collection("modules").doc(moduleId);
+  const summaryRef = sectionRef.collection("_meta").doc("summary");
+  function moduleRef(moduleId) { return sectionRef.collection("modules").doc(moduleId); }
+
+  // ВАЖНО: ровно одно глобальное хранилище summary
+  let summariesData = {};
+
+  let unsubscribeSummary = null;
+  function startSummaryListener() {
+    if (unsubscribeSummary) return;
+    unsubscribeSummary = summaryRef.onSnapshot(
+      (snap) => {
+        if (snap.exists) {
+          const data = snap.data() || {};
+          summariesData = (data.modules && typeof data.modules === "object") ? data.modules : {};
+        } else {
+          summariesData = {};
+        }
+        updateSummaryTable(); // всегда перерисуем после прихода данных
+      },
+      (err) => {
+        console.warn("Summary listener error:", err);
+      }
+    );
   }
 
-  // Один документ со сводной по всем модулям секции (1 чтение для сводной)
-  const summaryRef = sectionRef.collection("_meta").doc("summary");
-  let summariesData = {}; // { M1: {qaPercent, floor, status, ready, updatedAt}, ... }
+  async function loadSummaryFromFirestore() {
+    // разовая загрузка, если вдруг listener ещё не стартанул
+    const snap = await summaryRef.get();
+    if (snap.exists) {
+      const data = snap.data() || {};
+      summariesData = (data.modules && typeof data.modules === "object") ? data.modules : {};
+    } else {
+      summariesData = {};
+    }
+  }
 </script>
 
 <script>
@@ -353,7 +372,7 @@
     return nums.map(n => n - 1).filter(i => i >= 0 && i < TASKS_STANDARD.length);
   }
 
-  // ---------- STATE ----------
+  // STATE
   let modulesData = {};
   let currentModuleId = "M1";
   let currentRole = "viewer";
@@ -365,12 +384,10 @@
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
     const len = tasks.length;
-
     if (!modulesData[moduleId]) {
       modulesData[moduleId] = { qaTasks: Array(len).fill(false), comments: Array(len).fill(""), qaUsers: Array(len).fill("") };
       return;
     }
-
     const m = modulesData[moduleId];
     if (!Array.isArray(m.qaTasks)) m.qaTasks = [];
     if (!Array.isArray(m.comments)) m.comments = [];
@@ -392,9 +409,7 @@
     m.qaUsers = newQaUsers;
   }
 
-  function initModulesData() {
-    for (let i = 1; i <= TOTAL_MODULES; i++) ensureModuleArraysSize("M" + i);
-  }
+  function initModulesData() { for (let i = 1; i <= TOTAL_MODULES; i++) ensureModuleArraysSize("M" + i); }
 
   function calculatePercent(arr) {
     if (!Array.isArray(arr) || arr.length === 0) return 0;
@@ -423,6 +438,90 @@
     return baseClass + " badge-inprogress";
   }
 
+  function getColorForPercent(p) {
+    const r1 = 220, g1 = 38,  b1 = 38;
+    const r2 = 255, g2 = 165, b2 = 0;
+    const r3 = 22,  g3 = 163, b3 = 74;
+
+    let r, g, b;
+    if (p < 50) {
+      const t = p / 50;
+      r = r1 + (r2 - r1) * t;
+      g = g1 + (g2 - g1) * t;
+      b = b1 + (b2 - b1) * t;
+    } else {
+      const t = (p - 50) / 50;
+      r = r2 + (r3 - r2) * t;
+      g = g2 + (g3 - g2) * t;
+      b = b2 + (b3 - b2) * t;
+    }
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  }
+
+  // Firestore
+  async function loadModuleFromFirestore(moduleId) {
+    ensureModuleArraysSize(moduleId);
+    try {
+      const snap = await moduleRef(moduleId).get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        modulesData[moduleId] = {
+          qaTasks: Array.isArray(data.qaTasks) ? data.qaTasks : modulesData[moduleId].qaTasks,
+          comments: Array.isArray(data.comments) ? data.comments : modulesData[moduleId].comments,
+          qaUsers: Array.isArray(data.qaUsers) ? data.qaUsers : modulesData[moduleId].qaUsers
+        };
+        ensureModuleArraysSize(moduleId);
+      }
+      loadedModules.add(moduleId);
+    } catch (e) {
+      console.warn("Не удалось загрузить модуль из Firestore:", moduleId, e);
+    }
+  }
+
+  let saveTimer = null;
+  function saveToFirestore() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const moduleId = currentModuleId;
+        const m = modulesData[moduleId];
+
+        await moduleRef(moduleId).set(
+          {
+            qaTasks: m.qaTasks,
+            comments: m.comments,
+            qaUsers: m.qaUsers,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+
+        const qaPercent = calculatePercent(m.qaTasks);
+        const floor = getFloor(moduleId);
+        const status = statusByPercent(qaPercent);
+        const ready = (qaPercent === 100);
+
+        const fieldPath = `modules.${moduleId}`;
+        await summaryRef.set(
+          {
+            [fieldPath]: {
+              qaPercent,
+              floor,
+              status,
+              ready,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }
+          },
+          { merge: true }
+        );
+
+      } catch (e) {
+        console.warn("Не удалось сохранить в Firestore:", currentModuleId, e);
+      }
+    }, 250);
+  }
+
+  // UI
   function updateModuleTypeHint() {
     const hint = document.getElementById("moduleTypeHint");
     const type = getModuleType(currentModuleId);
@@ -430,11 +529,7 @@
     else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ (4-й)";
     else hint.textContent = "Модуль ЛЛУ (5-й)";
   }
-
-  function updateModuleFloorInfo() {
-    document.getElementById("moduleFloorInfo").textContent = "Этаж: " + getFloor(currentModuleId);
-  }
-
+  function updateModuleFloorInfo() { document.getElementById("moduleFloorInfo").textContent = "Этаж: " + getFloor(currentModuleId); }
   function updateGroupUIForModule() {
     const select = document.getElementById("groupSelect");
     if (!select) return;
@@ -529,112 +624,8 @@
     select.value = currentFloorFilter;
   }
 
-  function getColorForPercent(p) {
-    const r1 = 220, g1 = 38,  b1 = 38;
-    const r2 = 255, g2 = 165, b2 = 0;
-    const r3 = 22,  g3 = 163, b3 = 74;
-
-    let r, g, b;
-    if (p < 50) {
-      const t = p / 50;
-      r = r1 + (r2 - r1) * t;
-      g = g1 + (g2 - g1) * t;
-      b = b1 + (b2 - b1) * t;
-    } else {
-      const t = (p - 50) / 50;
-      r = r2 + (r3 - r2) * t;
-      g = g2 + (g3 - g2) * t;
-      b = b2 + (b3 - b2) * t;
-    }
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  }
-
-  // ---------- Firestore ----------
-  async function loadModuleFromFirestore(moduleId) {
-    ensureModuleArraysSize(moduleId);
-    try {
-      const snap = await moduleRef(moduleId).get();
-      if (snap.exists) {
-        const data = snap.data() || {};
-        modulesData[moduleId] = {
-          qaTasks: Array.isArray(data.qaTasks) ? data.qaTasks : modulesData[moduleId].qaTasks,
-          comments: Array.isArray(data.comments) ? data.comments : modulesData[moduleId].comments,
-          qaUsers: Array.isArray(data.qaUsers) ? data.qaUsers : modulesData[moduleId].qaUsers
-        };
-        ensureModuleArraysSize(moduleId);
-      }
-      loadedModules.add(moduleId);
-    } catch (e) {
-      console.warn("Не удалось загрузить модуль из Firestore:", moduleId, e);
-    }
-  }
-
-  async function loadSummaryFromFirestore() {
-    try {
-      const snap = await summaryRef.get();
-      if (snap.exists) {
-        const data = snap.data() || {};
-        summariesData = (data.modules && typeof data.modules === "object") ? data.modules : {};
-      } else {
-        summariesData = {};
-      }
-    } catch (e) {
-      console.warn("Не удалось загрузить summary из Firestore:", e);
-      summariesData = {};
-    }
-  }
-
-  let saveTimer = null;
-  function saveToFirestore() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      try {
-        const moduleId = currentModuleId;
-        const m = modulesData[moduleId];
-
-        // 1) сохраняем модуль
-        await moduleRef(moduleId).set(
-          {
-            qaTasks: m.qaTasks,
-            comments: m.comments,
-            qaUsers: m.qaUsers,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          },
-          { merge: true }
-        );
-
-        // 2) обновляем сводную (только для этого модуля) в одном документе
-        const qaPercent = calculatePercent(m.qaTasks);
-        const floor = getFloor(moduleId);
-        const status = statusByPercent(qaPercent);
-        const ready = (qaPercent === 100);
-
-        // локальный кэш
-        summariesData[moduleId] = { qaPercent, floor, status, ready };
-
-        const fieldPath = `modules.${moduleId}`;
-        await summaryRef.set(
-          {
-            [fieldPath]: {
-              qaPercent,
-              floor,
-              status,
-              ready,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }
-          },
-          { merge: true }
-        );
-      } catch (e) {
-        console.warn("Не удалось сохранить в Firestore:", currentModuleId, e);
-      }
-    }, 250);
-  }
-
-  // ---------- UI ----------
   function renderTasks() {
     ensureModuleArraysSize(currentModuleId);
-
     const container = document.getElementById("tasksContainer");
     container.innerHTML = "";
 
@@ -750,7 +741,6 @@
         }
 
         updateModuleStats();
-        updateSummaryTable(); // сводная обновится локально (по summariesData)
         saveToFirestore();
       });
 
@@ -774,6 +764,7 @@
 
   function updateSummaryTable() {
     const tbody = document.getElementById("summaryTableBody");
+    if (!tbody) return;
     tbody.innerHTML = "";
 
     let readyCountAll = 0;
@@ -781,7 +772,6 @@
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
-
       const s = summariesData[id] || {};
       const qaPercent = Number.isFinite(s.qaPercent) ? s.qaPercent : 0;
 
@@ -909,79 +899,67 @@
     modulesData[currentModuleId].comments = Array(len).fill("");
     modulesData[currentModuleId].qaUsers = Array(len).fill("");
     renderTasks();
-    updateSummaryTable();
     saveToFirestore();
   }
 
   function initTabs() {
-  const buttons = document.querySelectorAll(".tab-button");
-  const contents = document.querySelectorAll(".tab-content");
+    const buttons = document.querySelectorAll(".tab-button");
+    const contents = document.querySelectorAll(".tab-content");
 
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const tab = btn.getAttribute("data-tab");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const tab = btn.getAttribute("data-tab");
+        buttons.forEach((b) => b.classList.remove("active"));
+        contents.forEach((c) => c.classList.remove("tab-active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + tab).classList.add("tab-active");
 
-      buttons.forEach((b) => b.classList.remove("active"));
-      contents.forEach((c) => c.classList.remove("tab-active"));
-
-      btn.classList.add("active");
-      document.getElementById("tab-" + tab).classList.add("tab-active");
-
-      if (tab === "section") {
-        // ⬇️ ВАЖНО: ждём Firestore, потом рисуем
-        await loadSummaryFromFirestore();
-        updateSummaryTable();
-      }
+        if (tab === "section") {
+          // listener гарантирует, что данные не "исчезнут"
+          startSummaryListener();
+          // на всякий случай разовая загрузка, если listener ещё не успел
+          await loadSummaryFromFirestore();
+          updateSummaryTable();
+        }
+      });
     });
-  });
-}
+  }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  initTabs();
-  initModulesData();
+  document.addEventListener("DOMContentLoaded", async () => {
+    initTabs();
+    initModulesData();
 
-  // 1) загружаем текущий модуль
-  await loadModuleFromFirestore(currentModuleId);
+    await loadModuleFromFirestore(currentModuleId);
 
-  // 2) загружаем сводную ОДИН раз и рисуем
-  await loadSummaryFromFirestore();
+    populateModuleSelect();
+    populateGroupSelect();
+    populateFloorFilter();
 
-  populateModuleSelect();
-  populateGroupSelect();
-  populateFloorFilter();
-
-  renderTasks();
-  updateSummaryTable();
-  updateRoleUI();
-
-  document.getElementById("moduleSelect").addEventListener("change", async (e) => {
-    currentModuleId = e.target.value;
-    if (!loadedModules.has(currentModuleId)) await loadModuleFromFirestore(currentModuleId);
     renderTasks();
+    updateRoleUI();
 
-    // ⚠️ тут лучше НЕ перерисовывать сводную, она берётся из summariesData
-    // updateSummaryTable();
+    document.getElementById("moduleSelect").addEventListener("change", async (e) => {
+      currentModuleId = e.target.value;
+      if (!loadedModules.has(currentModuleId)) await loadModuleFromFirestore(currentModuleId);
+      renderTasks();
+    });
+
+    document.getElementById("groupSelect").addEventListener("change", (e) => {
+      currentGroup = e.target.value;
+      renderTasks();
+    });
+
+    document.getElementById("floorFilterSelect").addEventListener("change", (e) => {
+      currentFloorFilter = e.target.value;
+      updateSummaryTable();
+    });
+
+    document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
+    document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
+    document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
+    document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
   });
-
-  document.getElementById("groupSelect").addEventListener("change", (e) => {
-    currentGroup = e.target.value;
-    renderTasks();
-  });
-
-  document.getElementById("floorFilterSelect").addEventListener("change", (e) => {
-    currentFloorFilter = e.target.value;
-    updateSummaryTable();
-  });
-
-  document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
-
-  document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
-  document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
-  document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
-});
 </script>
 
 </body>
 </html>
-
-
