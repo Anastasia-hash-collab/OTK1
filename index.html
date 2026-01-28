@@ -263,14 +263,27 @@
 
     if (snap.exists) {
       const data = snap.data() || {};
-      console.log("[SUMMARY] top keys:", Object.keys(data));
+console.log("[SUMMARY] top keys:", Object.keys(data));
 
-      const modulesMap = (data.modules && typeof data.modules === "object") ? data.modules : {};
-      summariesData = modulesMap;
+// пытаемся найти карту модулей под разными ключами
+const candidates = ["modules", "Modules", "summary", "data", "items", "map"];
 
-      console.log("[SUMMARY] modules count:", Object.keys(summariesData).length);
-      console.log("[SUMMARY] sample keys:", Object.keys(summariesData).slice(0, 10));
-      console.log("[SUMMARY] sample M1:", summariesData["M1"]);
+let found = null;
+for (const k of candidates) {
+  if (data[k] && typeof data[k] === "object") { found = data[k]; break; }
+}
+
+// если вообще нет подходящего ключа, попробуем считать что весь документ — это карта
+if (!found) {
+  // если внутри есть M1/M2 как ключи
+  if (data.M1 || data.M2 || data.M10) found = data;
+}
+
+summariesData = found && typeof found === "object" ? found : {};
+
+console.log("[SUMMARY] modules count:", Object.keys(summariesData).length);
+console.log("[SUMMARY] sample keys:", Object.keys(summariesData).slice(0, 10));
+console.log("[SUMMARY] sample M1:", summariesData["M1"]);
     } else {
       summariesData = {};
       console.log("[SUMMARY] document not found => summariesData cleared");
@@ -979,4 +992,5 @@
 
 </body>
 </html>
+
 
