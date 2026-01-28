@@ -936,50 +936,52 @@
   });
 }
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    initTabs();
-    initModulesData();
+document.addEventListener("DOMContentLoaded", async () => {
+  initTabs();
+  initModulesData();
 
-    // загрузим текущий модуль
-    await loadModuleFromFirestore(currentModuleId);
-   await loadSummaryFromFirestore();
-updateSummaryTable();
+  // 1) загружаем текущий модуль
+  await loadModuleFromFirestore(currentModuleId);
 
-    // загрузим summary один раз (чтобы сводная не была пустой даже до перехода)
-    await loadSummaryFromFirestore();
+  // 2) загружаем сводную ОДИН раз и рисуем
+  await loadSummaryFromFirestore();
 
-    populateModuleSelect();
-    populateGroupSelect();
-    populateFloorFilter();
+  populateModuleSelect();
+  populateGroupSelect();
+  populateFloorFilter();
 
+  renderTasks();
+  updateSummaryTable();
+  updateRoleUI();
+
+  document.getElementById("moduleSelect").addEventListener("change", async (e) => {
+    currentModuleId = e.target.value;
+    if (!loadedModules.has(currentModuleId)) await loadModuleFromFirestore(currentModuleId);
     renderTasks();
-    updateSummaryTable();
-    updateRoleUI();
 
-    document.getElementById("moduleSelect").addEventListener("change", async (e) => {
-      currentModuleId = e.target.value;
-      if (!loadedModules.has(currentModuleId)) await loadModuleFromFirestore(currentModuleId);
-      renderTasks();
-      updateSummaryTable();
-    });
-
-    document.getElementById("groupSelect").addEventListener("change", (e) => {
-      currentGroup = e.target.value;
-      renderTasks();
-    });
-
-    document.getElementById("floorFilterSelect").addEventListener("change", (e) => {
-      currentFloorFilter = e.target.value;
-      updateSummaryTable();
-    });
-
-    document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
-    document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
-    document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
-    document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
+    // ⚠️ тут лучше НЕ перерисовывать сводную, она берётся из summariesData
+    // updateSummaryTable();
   });
+
+  document.getElementById("groupSelect").addEventListener("change", (e) => {
+    currentGroup = e.target.value;
+    renderTasks();
+  });
+
+  document.getElementById("floorFilterSelect").addEventListener("change", (e) => {
+    currentFloorFilter = e.target.value;
+    updateSummaryTable();
+  });
+
+  document.getElementById("resetModule").addEventListener("click", resetCurrentModule);
+
+  document.getElementById("roleSelect").addEventListener("change", handleRoleChange);
+  document.getElementById("exportCsv").addEventListener("click", exportSummaryToCsv);
+  document.getElementById("exportModuleCsv").addEventListener("click", exportModuleChecklistToCsv);
+});
 </script>
 
 </body>
 </html>
+
 
