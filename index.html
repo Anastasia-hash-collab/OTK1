@@ -914,24 +914,27 @@
   }
 
   function initTabs() {
-    const buttons = document.querySelectorAll(".tab-button");
-    const contents = document.querySelectorAll(".tab-content");
+  const buttons = document.querySelectorAll(".tab-button");
+  const contents = document.querySelectorAll(".tab-content");
 
-    buttons.forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const tab = btn.getAttribute("data-tab");
-        buttons.forEach((b) => b.classList.remove("active"));
-        contents.forEach((c) => c.classList.remove("tab-active"));
-        btn.classList.add("active");
-        document.getElementById("tab-" + tab).classList.add("tab-active");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const tab = btn.getAttribute("data-tab");
 
-        if (tab === "section") {
-          await loadSummaryFromFirestore(); // 1 чтение
-          updateSummaryTable();
-        }
-      });
+      buttons.forEach((b) => b.classList.remove("active"));
+      contents.forEach((c) => c.classList.remove("tab-active"));
+
+      btn.classList.add("active");
+      document.getElementById("tab-" + tab).classList.add("tab-active");
+
+      if (tab === "section") {
+        // ⬇️ ВАЖНО: ждём Firestore, потом рисуем
+        await loadSummaryFromFirestore();
+        updateSummaryTable();
+      }
     });
-  }
+  });
+}
 
   document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
@@ -939,6 +942,8 @@
 
     // загрузим текущий модуль
     await loadModuleFromFirestore(currentModuleId);
+   await loadSummaryFromFirestore();
+updateSummaryTable();
 
     // загрузим summary один раз (чтобы сводная не была пустой даже до перехода)
     await loadSummaryFromFirestore();
@@ -977,3 +982,4 @@
 
 </body>
 </html>
+
