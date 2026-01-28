@@ -256,44 +256,32 @@
 
   async function loadSummaryFromFirestore() {
   try {
-    console.log("[SUMMARY] trying to read:", summaryRef.path);
-
     const snap = await summaryRef.get();
-    console.log("[SUMMARY] exists =", snap.exists);
+    if (!snap.exists) { summariesData = {}; return; }
 
-    if (snap.exists) {
-      const data = snap.data() || {};
-console.log("[SUMMARY] top keys:", JSON.stringify(Object.keys(data)));
-console.log("[SUMMARY] has modules field:", !!data.modules, "type:", typeof data.modules);
+    const data = snap.data() || {};
 
-// пытаемся найти карту модулей под разными ключами
-const candidates = ["modules", "Modules", "summary", "data", "items", "map"];
-
-let found = null;
-for (const k of candidates) {
-  if (data[k] && typeof data[k] === "object") { found = data[k]; break; }
-}
-
-// если вообще нет подходящего ключа, попробуем считать что весь документ — это карта
-if (!found) {
-  // если внутри есть M1/M2 как ключи
-  if (data.M1 || data.M2 || data.M10) found = data;
-}
-
-summariesData = found && typeof found === "object" ? found : {};
-
-console.log("[SUMMARY] modules count:", Object.keys(summariesData).length);
-console.log("[SUMMARY] sample keys:", Object.keys(summariesData).slice(0, 10));
-console.log("[SUMMARY] sample M1:", summariesData["M1"]);
-    } else {
-      summariesData = {};
-      console.log("[SUMMARY] document not found => summariesData cleared");
+    // Нормальный случай: если когда-то будет data.modules = {M1:...}
+    if (data.modules && typeof data.modules === "object") {
+      summariesData = data.modules;
+      return;
     }
+
+    // Твой текущий случай: плоские поля "modules.M1", "modules.M2", ...
+    const built = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (k.startsWith("modules.")) {
+        const moduleId = k.slice("modules.".length); // "M1"
+        built[moduleId] = v;
+      }
+    }
+    summariesData = built;
   } catch (e) {
-    console.warn("[SUMMARY] read error:", e);
+    console.warn("Не удалось загрузить summary из Firestore:", e);
     summariesData = {};
   }
 }
+
 </script>
 
 <script>
@@ -993,6 +981,7 @@ console.log("[SUMMARY] sample M1:", summariesData["M1"]);
 
 </body>
 </html>
+
 
 
 
