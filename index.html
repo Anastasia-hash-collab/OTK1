@@ -84,7 +84,7 @@
 <header>
   <div>
     <h1>Контроль качества ИОР в модуле. (Выключите VPN)</h1>
-    <small id="headerSubtitle">Бабушкинская · секции 1,2 · ОТК</small>
+    <small id="headerSubtitle">Бабушкинская · секция 1 · ОТК</small>
   </div>
 
   <div class="role-bar">
@@ -220,19 +220,22 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
+  // НОВЫЕ docId, чтобы всё было пусто и не тянулись старые данные
   const SECTION_OPTIONS = [
-    { value: "1", label: "Секция 1", docId: "c1_s1" },
-    { value: "2", label: "Секция 2", docId: "c1_s2" }
+    { value: "1", label: "Секция 1", docId: "bab_s1" },
+    { value: "2", label: "Секция 2", docId: "bab_s2" }
   ];
+
+  const PROJECT_NAME = "Бабушкинская";
 
   const FLOOR_START = 2;
   const FLOOR_END = 23;
   const MODULES_PER_FLOOR = 6;
   const TOTAL_MODULES = (FLOOR_END - FLOOR_START + 1) * MODULES_PER_FLOOR; // 132
 
-  // 1,2,5,6 - стандартные; 3 - смежный с ЛЛУ; 4 - ЛЛУ
-  const ADJ_LLU_POS = 3;
-  const LLU_POS = 4;
+  // 1,2,5,6 - типовые; 4 - смежный с ЛЛУ; 3 - ЛЛУ
+  const ADJ_LLU_POS = 4;
+  const LLU_POS = 3;
 
   let currentSection = "1";
 
@@ -587,7 +590,7 @@
 
   function updateHeaderSubtitle() {
     const el = document.getElementById("headerSubtitle");
-    el.textContent = `Черёмушки · Корпус 1 · секция ${currentSection} · ОТК`;
+    el.textContent = `${PROJECT_NAME} · секция ${currentSection} · ОТК`;
   }
 
   function updateModuleTypeHint() {
@@ -918,13 +921,13 @@
 
   function exportSummaryToCsv() {
     let rows = [];
-    rows.push(["Секция", "Модуль", "Этаж", "% ОТК", "Статус"]);
+    rows.push(["Объект", "Секция", "Модуль", "Этаж", "% ОТК", "Статус"]);
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
       const qaPercent = Number.isFinite(summariesData[id]?.qaPercent) ? summariesData[id].qaPercent : 0;
       const floor = getFloor(id);
-      rows.push([getSectionLabel(currentSection), getModuleDisplayName(id), String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
+      rows.push([PROJECT_NAME, getSectionLabel(currentSection), getModuleDisplayName(id), String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
     }
 
     const csvContent = rows
@@ -935,7 +938,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `svodka_section_${currentSection}.csv`;
+    a.download = `svodka_${PROJECT_NAME}_section_${currentSection}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -951,10 +954,11 @@
     const moduleData = modulesData[moduleId];
 
     let rows = [];
-    rows.push(["Секция", "Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий", "Фамилия ОТК"]);
+    rows.push(["Объект", "Секция", "Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий", "Фамилия ОТК"]);
 
     tasks.forEach((taskText, index) => {
       rows.push([
+        PROJECT_NAME,
         getSectionLabel(currentSection),
         getModuleDisplayName(moduleId),
         String(floor),
@@ -974,7 +978,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `checklist_section${currentSection}_${getModuleDisplayName(moduleId)}.csv`;
+    a.download = `checklist_${PROJECT_NAME}_section${currentSection}_${getModuleDisplayName(moduleId)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
