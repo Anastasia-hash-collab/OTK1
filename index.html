@@ -408,10 +408,10 @@
   }
 
   function getModuleDisplayName(moduleId) {
-    const floor = getFloor(moduleId);
-    const pos = getPositionOnFloor(moduleId);
-    return `Э${floor}-М${pos}`;
-  }
+  const floor = getFloor(moduleId);
+  const pos = getPositionOnFloor(moduleId);
+  return `${moduleId} (Э${floor}-М${pos})`;
+}
 
   function getModuleType(moduleId) {
     const pos = getPositionOnFloor(moduleId);
