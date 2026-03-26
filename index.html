@@ -8,7 +8,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F8FAFC; color: #0f172a; }
 
-  header { background: #1E3A8A; color: white; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  header { background: #1E3A8A; color: white; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 20px; font-weight: 600; }
   header small { opacity: 0.9; font-size: 13px; }
 
@@ -84,7 +84,7 @@
 <header>
   <div>
     <h1>Контроль качества ИОР в модуле. (Выключите VPN)</h1>
-    <small>Черёмушки · Корпус 1 · секция 3 · ОТК</small>
+    <small id="headerSubtitle">Черёмушки · Корпус 1 · секция 1 · ОТК</small>
   </div>
 
   <div class="role-bar">
@@ -112,6 +112,10 @@
           <h2>Работы по модулю</h2>
         </div>
         <div class="controls">
+          <div>
+            <label>Секция</label>
+            <select id="sectionSelect"></select>
+          </div>
           <div>
             <label>Модуль</label>
             <select id="moduleSelect"></select>
@@ -164,7 +168,7 @@
           </svg>
           <div>
             <div id="sectionPercentQA">Принято ОТК: 0%</div>
-            <div class="progress-label">Вся секция</div>
+            <div class="progress-label">Текущая секция</div>
           </div>
         </div>
       </div>
@@ -216,29 +220,57 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // СЕКЦИЯ 3
-  const SECTION_DOC_ID = "c1_s3";
+  const SECTION_OPTIONS = [
+    { value: "1", label: "Секция 1", docId: "c1_s1" },
+    { value: "2", label: "Секция 2", docId: "c1_s2" }
+  ];
 
   const FLOOR_START = 2;
   const FLOOR_END = 23;
-  const MODULES_PER_FLOOR = 8;
-  const TOTAL_MODULES = (FLOOR_END - FLOOR_START + 1) * MODULES_PER_FLOOR; // 176
+  const MODULES_PER_FLOOR = 6;
+  const TOTAL_MODULES = (FLOOR_END - FLOOR_START + 1) * MODULES_PER_FLOOR; // 132
 
-  // секция 3: 4-й смежный, 5-й ЛЛУ
-  const ADJ_LLU_POS = 4;
-  const LLU_POS = 5;
+  // 1,2,5,6 - стандартные; 3 - смежный с ЛЛУ; 4 - ЛЛУ
+  const ADJ_LLU_POS = 3;
+  const LLU_POS = 4;
 
-  const sectionRef = db.collection("qc_modules").doc(SECTION_DOC_ID);
-  const summaryRef = sectionRef.collection("_meta").doc("summary");
-  function moduleRef(moduleId) { return sectionRef.collection("modules").doc(moduleId); }
+  let currentSection = "1";
 
-  // ВАЖНО: ровно одно глобальное хранилище summary
+  function getSectionDocId(sectionValue) {
+    const found = SECTION_OPTIONS.find(s => s.value === sectionValue);
+    return found ? found.docId : SECTION_OPTIONS[0].docId;
+  }
+
+  function getSectionLabel(sectionValue) {
+    const found = SECTION_OPTIONS.find(s => s.value === sectionValue);
+    return found ? found.label : "Секция 1";
+  }
+
+  function getSectionRef() {
+    return db.collection("qc_modules").doc(getSectionDocId(currentSection));
+  }
+
+  function getSummaryRef() {
+    return getSectionRef().collection("_meta").doc("summary");
+  }
+
+  function moduleRef(moduleId) {
+    return getSectionRef().collection("modules").doc(moduleId);
+  }
+
   let summariesData = {};
-
   let unsubscribeSummary = null;
+
+  function stopSummaryListener() {
+    if (unsubscribeSummary) {
+      unsubscribeSummary();
+      unsubscribeSummary = null;
+    }
+  }
+
   function startSummaryListener() {
     if (unsubscribeSummary) return;
-    unsubscribeSummary = summaryRef.onSnapshot(
+    unsubscribeSummary = getSummaryRef().onSnapshot(
       (snap) => {
         if (snap.exists) {
           const data = snap.data() || {};
@@ -246,7 +278,7 @@
         } else {
           summariesData = {};
         }
-        updateSummaryTable(); // всегда перерисуем после прихода данных
+        updateSummaryTable();
       },
       (err) => {
         console.warn("Summary listener error:", err);
@@ -255,33 +287,30 @@
   }
 
   async function loadSummaryFromFirestore() {
-  try {
-    const snap = await summaryRef.get();
-    if (!snap.exists) { summariesData = {}; return; }
+    try {
+      const snap = await getSummaryRef().get();
+      if (!snap.exists) { summariesData = {}; return; }
 
-    const data = snap.data() || {};
+      const data = snap.data() || {};
 
-    // Нормальный случай: если когда-то будет data.modules = {M1:...}
-    if (data.modules && typeof data.modules === "object") {
-      summariesData = data.modules;
-      return;
-    }
-
-    // Твой текущий случай: плоские поля "modules.M1", "modules.M2", ...
-    const built = {};
-    for (const [k, v] of Object.entries(data)) {
-      if (k.startsWith("modules.")) {
-        const moduleId = k.slice("modules.".length); // "M1"
-        built[moduleId] = v;
+      if (data.modules && typeof data.modules === "object") {
+        summariesData = data.modules;
+        return;
       }
-    }
-    summariesData = built;
-  } catch (e) {
-    console.warn("Не удалось загрузить summary из Firestore:", e);
-    summariesData = {};
-  }
-}
 
+      const built = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (k.startsWith("modules.")) {
+          const moduleId = k.slice("modules.".length);
+          built[moduleId] = v;
+        }
+      }
+      summariesData = built;
+    } catch (e) {
+      console.warn("Не удалось загрузить summary из Firestore:", e);
+      summariesData = {};
+    }
+  }
 </script>
 
 <script>
@@ -361,9 +390,25 @@
     "Отделка":  [1, 16, 17, 18, 19, 20, 21]
   };
 
-  function getModuleNumber(moduleId) { return parseInt(moduleId.replace("M",""), 10) || 1; }
-  function getFloor(moduleId) { const num = getModuleNumber(moduleId); return FLOOR_START + Math.floor((num - 1) / MODULES_PER_FLOOR); }
-  function getPositionOnFloor(moduleId) { const num = getModuleNumber(moduleId); return ((num - 1) % MODULES_PER_FLOOR) + 1; }
+  function getModuleNumber(moduleId) {
+    return parseInt(moduleId.replace("M",""), 10) || 1;
+  }
+
+  function getFloor(moduleId) {
+    const num = getModuleNumber(moduleId);
+    return FLOOR_START + Math.floor((num - 1) / MODULES_PER_FLOOR);
+  }
+
+  function getPositionOnFloor(moduleId) {
+    const num = getModuleNumber(moduleId);
+    return ((num - 1) % MODULES_PER_FLOOR) + 1;
+  }
+
+  function getModuleDisplayName(moduleId) {
+    const floor = getFloor(moduleId);
+    const pos = getPositionOnFloor(moduleId);
+    return `Э${floor}-М${pos}`;
+  }
 
   function getModuleType(moduleId) {
     const pos = getPositionOnFloor(moduleId);
@@ -390,14 +435,13 @@
     return nums.map(n => n - 1).filter(i => i >= 0 && i < TASKS_STANDARD.length);
   }
 
-  // STATE
   let modulesData = {};
   let currentModuleId = "M1";
   let currentRole = "viewer";
   let currentGroup = "Все";
   let currentFloorFilter = "all";
   const authenticatedRoles = { otk: false, chief: false };
-  const loadedModules = new Set();
+  let loadedModules = new Set();
 
   function ensureModuleArraysSize(moduleId) {
     const tasks = getTasksForModule(moduleId);
@@ -427,7 +471,10 @@
     m.qaUsers = newQaUsers;
   }
 
-  function initModulesData() { for (let i = 1; i <= TOTAL_MODULES; i++) ensureModuleArraysSize("M" + i); }
+  function initModulesData() {
+    modulesData = {};
+    for (let i = 1; i <= TOTAL_MODULES; i++) ensureModuleArraysSize("M" + i);
+  }
 
   function calculatePercent(arr) {
     if (!Array.isArray(arr) || arr.length === 0) return 0;
@@ -476,7 +523,6 @@
     return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
   }
 
-  // Firestore
   async function loadModuleFromFirestore(moduleId) {
     ensureModuleArraysSize(moduleId);
     try {
@@ -520,7 +566,7 @@
         const ready = (qaPercent === 100);
 
         const fieldPath = `modules.${moduleId}`;
-        await summaryRef.set(
+        await getSummaryRef().set(
           {
             [fieldPath]: {
               qaPercent,
@@ -539,15 +585,25 @@
     }, 250);
   }
 
-  // UI
+  function updateHeaderSubtitle() {
+    const el = document.getElementById("headerSubtitle");
+    el.textContent = `Черёмушки · Корпус 1 · секция ${currentSection} · ОТК`;
+  }
+
   function updateModuleTypeHint() {
     const hint = document.getElementById("moduleTypeHint");
     const type = getModuleType(currentModuleId);
-    if (type === "standard") hint.textContent = "Типовой модуль";
-    else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ (4-й)";
-    else hint.textContent = "Модуль ЛЛУ (5-й)";
+    const pos = getPositionOnFloor(currentModuleId);
+    if (type === "standard") hint.textContent = `Типовой модуль (${pos}-й на этаже)`;
+    else if (type === "adj_llu") hint.textContent = "Смежный модуль с ЛЛУ (3-й)";
+    else hint.textContent = "Модуль ЛЛУ (4-й)";
   }
-  function updateModuleFloorInfo() { document.getElementById("moduleFloorInfo").textContent = "Этаж: " + getFloor(currentModuleId); }
+
+  function updateModuleFloorInfo() {
+    document.getElementById("moduleFloorInfo").textContent =
+      `Этаж: ${getFloor(currentModuleId)} · Позиция на этаже: ${getPositionOnFloor(currentModuleId)}`;
+  }
+
   function updateGroupUIForModule() {
     const select = document.getElementById("groupSelect");
     if (!select) return;
@@ -596,16 +652,33 @@
     }
   }
 
+  function populateSectionSelect() {
+    const select = document.getElementById("sectionSelect");
+    select.innerHTML = "";
+    SECTION_OPTIONS.forEach((section) => {
+      const opt = document.createElement("option");
+      opt.value = section.value;
+      opt.textContent = section.label;
+      select.appendChild(opt);
+    });
+    select.value = currentSection;
+  }
+
   function populateModuleSelect() {
     const select = document.getElementById("moduleSelect");
     select.innerHTML = "";
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
       const type = getModuleType(id);
-      const label = type === "standard" ? "" : (type === "adj_llu" ? " (4-й, смежн.)" : " (5-й, ЛЛУ)");
+      const typeLabel = type === "standard"
+        ? "типовой"
+        : type === "adj_llu"
+          ? "смежн. с ЛЛУ"
+          : "ЛЛУ";
+
       const opt = document.createElement("option");
       opt.value = id;
-      opt.textContent = id + label;
+      opt.textContent = `${getModuleDisplayName(id)} (${typeLabel})`;
       select.appendChild(opt);
     }
     select.value = currentModuleId;
@@ -647,6 +720,7 @@
     const container = document.getElementById("tasksContainer");
     container.innerHTML = "";
 
+    updateHeaderSubtitle();
     updateModuleTypeHint();
     updateModuleFloorInfo();
     updateGroupUIForModule();
@@ -805,7 +879,7 @@
       if (ready) tr.classList.add("row-ready");
 
       const tdModule = document.createElement("td");
-      tdModule.textContent = id;
+      tdModule.textContent = getModuleDisplayName(id);
 
       const tdFloor = document.createElement("td");
       tdFloor.textContent = floor;
@@ -844,13 +918,13 @@
 
   function exportSummaryToCsv() {
     let rows = [];
-    rows.push(["Модуль", "Этаж", "% ОТК", "Статус"]);
+    rows.push(["Секция", "Модуль", "Этаж", "% ОТК", "Статус"]);
 
     for (let i = 1; i <= TOTAL_MODULES; i++) {
       const id = "M" + i;
       const qaPercent = Number.isFinite(summariesData[id]?.qaPercent) ? summariesData[id].qaPercent : 0;
       const floor = getFloor(id);
-      rows.push([id, String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
+      rows.push([getSectionLabel(currentSection), getModuleDisplayName(id), String(floor), qaPercent + "%", statusByPercent(qaPercent)]);
     }
 
     const csvContent = rows
@@ -861,7 +935,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "svodka_section3.csv";
+    a.download = `svodka_section_${currentSection}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -877,11 +951,12 @@
     const moduleData = modulesData[moduleId];
 
     let rows = [];
-    rows.push(["Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий", "Фамилия ОТК"]);
+    rows.push(["Секция", "Модуль", "Этаж", "№", "Вид работ", "Принято ОТК", "Комментарий", "Фамилия ОТК"]);
 
     tasks.forEach((taskText, index) => {
       rows.push([
-        moduleId,
+        getSectionLabel(currentSection),
+        getModuleDisplayName(moduleId),
         String(floor),
         String(index + 1),
         taskText,
@@ -899,7 +974,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `checklist_section3_${moduleId}.csv`;
+    a.download = `checklist_section${currentSection}_${getModuleDisplayName(moduleId)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -933,9 +1008,7 @@
         document.getElementById("tab-" + tab).classList.add("tab-active");
 
         if (tab === "section") {
-          // listener гарантирует, что данные не "исчезнут"
           startSummaryListener();
-          // на всякий случай разовая загрузка, если listener ещё не успел
           await loadSummaryFromFirestore();
           updateSummaryTable();
         }
@@ -943,18 +1016,54 @@
     });
   }
 
+  async function switchSection(newSection) {
+    currentSection = newSection;
+    currentModuleId = "M1";
+    currentGroup = "Все";
+    currentFloorFilter = "all";
+    summariesData = {};
+    loadedModules = new Set();
+    stopSummaryListener();
+    initModulesData();
+
+    populateSectionSelect();
+    populateModuleSelect();
+    populateGroupSelect();
+    populateFloorFilter();
+    updateHeaderSubtitle();
+
+    await loadModuleFromFirestore(currentModuleId);
+    renderTasks();
+    updateRoleUI();
+
+    const sectionTabActive = document.getElementById("tab-section").classList.contains("tab-active");
+    if (sectionTabActive) {
+      startSummaryListener();
+      await loadSummaryFromFirestore();
+      updateSummaryTable();
+    } else {
+      updateSummaryTable();
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
     initTabs();
     initModulesData();
 
-    await loadModuleFromFirestore(currentModuleId);
-
+    populateSectionSelect();
     populateModuleSelect();
     populateGroupSelect();
     populateFloorFilter();
+    updateHeaderSubtitle();
+
+    await loadModuleFromFirestore(currentModuleId);
 
     renderTasks();
     updateRoleUI();
+
+    document.getElementById("sectionSelect").addEventListener("change", async (e) => {
+      await switchSection(e.target.value);
+    });
 
     document.getElementById("moduleSelect").addEventListener("change", async (e) => {
       currentModuleId = e.target.value;
@@ -981,7 +1090,3 @@
 
 </body>
 </html>
-
-
-
-
